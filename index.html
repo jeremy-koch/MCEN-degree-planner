@@ -14,20 +14,14 @@
         .progress-fill { background-color: var(--cu-gold); transition: width 0.5s ease; }
         .summer-row { display: none; }
         .summer-row.show { display: block; }
-        
-        /* Hover Tooltip */
         .course-chip { position: relative; cursor: help; }
         .course-chip:hover::after {
-            content: attr(data-title);
-            position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
-            background: #1a1a1a; color: white; padding: 6px 12px; border-radius: 4px;
-            white-space: nowrap; font-size: 11px; z-index: 50; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            content: attr(data-title); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+            background: #111; color: white; padding: 6px 10px; border-radius: 4px; white-space: nowrap; font-size: 10px; z-index: 50;
         }
-
         .notes-area { display: none; }
         .notes-area.show { display: block; }
-
-        @media print { .no-print { display: none !important; } .notes-input { border: none; resize: none; } }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8 text-gray-900">
@@ -50,12 +44,16 @@
             </div>
         </header>
 
-        <div class="bg-white border-x border-b p-3 flex gap-2 no-print justify-between">
+        <div class="bg-white border-x border-b p-3 flex flex-wrap gap-2 no-print justify-between">
             <div class="flex gap-2">
-                <button onclick="window.print()" class="text-[10px] font-bold px-3 py-1 bg-gray-100 rounded hover:bg-gray-200">PRINT PDF</button>
-                <button id="tog-trans" class="text-[10px] font-bold px-3 py-1 bg-gray-100 rounded uppercase">+ Transfer Credits</button>
+                <button onclick="window.print()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border">PRINT PDF</button>
+                <button id="tog-trans" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase">+ Transfer</button>
+                <button onclick="pyExport()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase">⬇ Export JSON</button>
+                <label class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase cursor-pointer">
+                    ⬆ Import JSON <input type="file" id="file-upload" class="hidden" onchange="pyImport(event)">
+                </label>
             </div>
-            <button onclick="clearStorage()" class="text-[10px] font-bold px-3 py-1 text-red-600 bg-red-50 rounded hover:bg-red-100">RESET ALL</button>
+            <button onclick="clearStorage()" class="text-[10px] font-bold px-3 py-1 text-red-600 bg-red-50 rounded hover:bg-red-100 border border-red-200">RESET ALL</button>
         </div>
 
         <div id="sec-trans" class="hidden bg-amber-50 p-4 border-x border-b border-dashed border-gray-300">
@@ -67,7 +65,7 @@
         </div>
 
         <div class="bg-white p-4 border-x border-b shadow-sm mb-6">
-            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Missing Core (Hover for Info):</h3>
+            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Remaining Requirements:</h3>
             <div id="req-bank" class="flex flex-wrap gap-1"></div>
         </div>
 
@@ -79,38 +77,28 @@
     </div>
 
     <script>
-        // JS Bridge
-        function pyAdd(sid) {
-            const val = document.getElementById('in-' + sid).value;
-            if (window.py_add_course) window.py_add_course(sid, val);
+        function pyAdd(sid) { window.py_add_course?.(sid, document.getElementById('in-' + sid).value); }
+        function pyRem(sid, idx) { window.py_rem_course?.(sid, idx); }
+        function pyExport() { window.py_save_file?.(); }
+        async function pyImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            window.py_load_file?.(text);
         }
-        function pyRem(sid, idx) {
-            if (window.py_rem_course) window.py_rem_course(sid, idx);
-        }
-        function toggleSummer(cleanName, btn) {
-            const el = document.getElementById('row-' + cleanName + '-Summer');
+        function toggleSummer(n, b) {
+            const el = document.getElementById('row-' + n + '-Summer');
             el.classList.toggle('show');
-            btn.innerText = el.classList.contains('show') ? '- HIDE SUMMER' : '+ ADD SUMMER';
+            b.innerText = el.classList.contains('show') ? '- HIDE SUMMER' : '+ ADD SUMMER';
         }
-        function toggleNotes(cleanName, btn) {
-            const el = document.getElementById('notes-' + cleanName);
+        function toggleNotes(n, b) {
+            const el = document.getElementById('notes-' + n);
             el.classList.toggle('show');
-            btn.innerText = el.classList.contains('show') ? '- HIDE NOTES' : '+ ADD NOTES/GOALS';
+            b.innerText = el.classList.contains('show') ? '- HIDE NOTES' : '+ ADD NOTES/GOALS';
         }
-        function clearStorage() {
-            if(confirm("Are you sure? This will delete your entire saved plan.")) {
-                localStorage.removeItem('mcen_planner_data');
-                location.reload();
-            }
-        }
-        function pyUpdateNotes(name, val) {
-            if (window.py_save_notes) window.py_save_notes(name, val);
-        }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && e.target.classList.contains('enter-listener')) {
-                pyAdd(e.target.getAttribute('data-sid'));
-            }
+        function clearStorage() { if(confirm("Wipe all data?")) { localStorage.removeItem('mcen_planner_data'); location.reload(); } }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && e.target.classList.contains('enter-listener')) pyAdd(e.target.getAttribute('data-sid'));
         });
     </script>
 
@@ -136,39 +124,30 @@
             "MCEN 3047": {"t": "Data Analysis & Exp Methods", "c": 4}, "MCEN 4045": {"t": "ME Design Project 1", "c": 3}, 
             "MCEN 4085": {"t": "ME Senior Design 2", "c": 3},
             "WRITING REQUIREMENT": {"t": "Upper Div Writing", "c": 3},
-            "FREE ELECTIVE 1": {"t": "Free Elective", "c": 3}
+            "HSS LOWER 1": {"t": "Humanities/SocSci Lower Div", "c": 3},
+            "HSS LOWER 2": {"t": "Humanities/SocSci Lower Div", "c": 3},
+            "HSS LOWER 3": {"t": "Humanities/SocSci Lower Div", "c": 3},
+            "HSS UPPER 1": {"t": "Humanities/SocSci Upper Div", "c": 3},
+            "HSS UPPER 2": {"t": "Humanities/SocSci Upper Div", "c": 3},
+            "MCEN TECH ELECTIVE 1": {"t": "ME Tech Elective", "c": 3},
+            "MCEN TECH ELECTIVE 2": {"t": "ME Tech Elective", "c": 3},
+            "GENERAL TECH ELECTIVE 1": {"t": "Any Approved Tech Elective", "c": 3},
+            "GENERAL TECH ELECTIVE 2": {"t": "Any Approved Tech Elective", "c": 3},
+            "FREE ELECTIVE 1": {"t": "Any Course", "c": 3},
+            "FREE ELECTIVE 2": {"t": "Any Course", "c": 3}
         }
         
-        # Default State
-        planner = {"transfer": []}
-        sems = ["transfer"]
-        notes = {}
-        year_list = ["First Year", "Sophomore Year", "Junior Year", "Senior Year"]
-
-        def save_to_local():
-            data = {"planner": planner, "sems": sems, "notes": notes, "year_list": year_list}
-            window.localStorage.setItem('mcen_planner_data', json.dumps(data))
-
-        def load_from_local():
-            global planner, sems, notes, year_list
-            raw = window.localStorage.getItem('mcen_planner_data')
-            if raw:
-                data = json.loads(raw)
-                planner = data.get("planner", planner)
-                sems = data.get("sems", sems)
-                notes = data.get("notes", notes)
-                year_list = data.get("year_list", year_list)
+        planner, sems, notes, year_list = {"transfer": []}, ["transfer"], {}, ["First Year", "Sophomore Year", "Junior Year", "Senior Year"]
 
         def refresh():
             grand_total, core_count = 0, 0
             planned_norm = [c['code'].replace(" ","").upper() for s in sems for c in planner[s]]
-            
             bank = document.getElementById("req-bank")
             bank.innerHTML = ""
             for code, data in CATALOG.items():
                 if code.replace(" ","").upper() not in planned_norm:
                     span = document.createElement("span")
-                    span.className = "course-chip text-[9px] bg-gray-50 border px-1.5 py-0.5 rounded text-gray-400 font-mono"
+                    span.className = "course-chip text-[9px] bg-gray-100 border px-1.5 py-0.5 rounded text-gray-400 font-mono"
                     span.innerText = code
                     span.setAttribute("data-title", f"{data['t']} ({data['c']} hrs)")
                     bank.appendChild(span)
@@ -191,82 +170,66 @@
                     el.appendChild(li)
                 grand_total += sub
                 if document.getElementById(f"sub-{sid}"): document.getElementById(f"sub-{sid}").innerText = str(sub)
-            
             document.getElementById("grand-total").innerText = str(grand_total)
-            save_to_local()
+            window.localStorage.setItem('mcen_planner_data', json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list}))
 
         def add_course(sid, val):
             val = val.strip().upper()
-            match = val if val in CATALOG else (val if " " in val else f"{val[:4]} {val[4:]}")
-            if match in CATALOG:
+            match = None
+            if val in CATALOG: match = val
+            else:
+                fuzzy = val if " " in val else f"{val[:4]} {val[4:]}"
+                if fuzzy in CATALOG: match = fuzzy
+            
+            if match:
                 planner[sid].append({"code": match, "credits": CATALOG[match]['c']})
                 document.getElementById(f"in-{sid}").value = ""
                 refresh()
-
-        def rem_course(sid, idx):
-            planner[sid].pop(int(idx))
-            refresh()
-
-        def save_notes(name, val):
-            notes[name] = val
-            save_to_local()
-
-        window.py_add_course = create_proxy(add_course)
-        window.py_rem_course = create_proxy(rem_course)
-        window.py_save_notes = create_proxy(save_notes)
 
         def build_year(name):
             cont = document.getElementById("main-container")
             y_div = document.createElement("div")
             clean = name.replace(" ", "")
-            
             note_content = notes.get(name, "")
-            html = f"""
-            <div class='mb-2 flex justify-between items-end border-b-4 border-black pb-1'>
-                <h3 class='text-xl font-black italic uppercase tracking-tighter'>{name}</h3>
-                <div class='flex gap-4 no-print'>
-                    <button onclick='toggleNotes("{clean}", this)' class='text-[10px] font-bold text-gray-500 hover:underline'>+ ADD NOTES/GOALS</button>
-                    <button onclick='toggleSummer("{clean}", this)' class='text-[10px] font-bold text-amber-600 hover:underline'>+ ADD SUMMER</button>
-                </div>
-            </div>
-            <div id='notes-{clean}' class='notes-area mb-4 {"show" if note_content else ""}'>
-                <textarea oninput='pyUpdateNotes("{name}", this.value)' class='w-full p-3 text-xs border rounded-lg bg-gray-50 focus:bg-white outline-none notes-input' rows='2' placeholder='Yearly goals, internship deadlines, or project ideas...'>{note_content}</textarea>
-            </div>
-            <div class='flex flex-col gap-4'>"""
-            
+            html = f"<div class='mb-2 flex justify-between items-end border-b-4 border-black pb-1'><h3 class='text-xl font-black italic uppercase tracking-tighter'>{name}</h3><div class='flex gap-4 no-print'><button onclick='toggleNotes(\"{clean}\", this)' class='text-[10px] font-bold text-gray-400'>+ NOTES</button><button onclick='toggleSummer(\"{clean}\", this)' class='text-[10px] font-bold text-amber-600'>+ SUMMER</button></div></div><div id='notes-{clean}' class='notes-area mb-4 {'show' if note_content else ''}'><textarea id='ta-{clean}' class='w-full p-2 text-xs border rounded bg-gray-50' rows='2' placeholder='Goals...'>{note_content}</textarea></div><div class='flex flex-col gap-4'>"
             for t in ["Fall", "Spring", "Summer"]:
                 sid = f"{clean}-{t}"
                 if sid not in sems: sems.append(sid)
                 if sid not in planner: planner[sid] = []
                 is_sum = "summer-row" if t == "Summer" and not planner[sid] else ("summer-row show" if t == "Summer" else "")
-                html += f"""
-                <div id='row-{sid}' class='bg-white p-4 rounded-lg border shadow-sm {is_sum}'>
-                    <div class='flex justify-between items-center mb-3'>
-                        <span class='font-black text-sm uppercase tracking-widest'>{t}</span>
-                        <span class='text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded'>HRS: <span id='sub-{sid}'>0</span></span>
-                    </div>
-                    <div class='flex gap-1 mb-3 no-print'>
-                        <input id='in-{sid}' class='border p-2 text-xs rounded flex-1 font-mono enter-listener' data-sid='{sid}' placeholder='Code'>
-                        <button onclick='pyAdd("{sid}")' class='btn-cu px-4 py-1 rounded text-[10px]'>ADD</button>
-                    </div>
-                    <ul id='list-{sid}' class='space-y-1'></ul>
-                </div>"""
-            html += "</div>"
-            y_div.innerHTML = html
+                html += f"<div id='row-{sid}' class='bg-white p-4 rounded border shadow-sm {is_sum}'><div class='flex justify-between items-center mb-3'><span class='font-black text-xs uppercase'>{t}</span><span class='text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded'>HRS: <span id='sub-{sid}'>0</span></span></div><div class='flex gap-1 mb-2 no-print'><input id='in-{sid}' class='border p-2 text-[10px] rounded flex-1 font-mono enter-listener' data-sid='{sid}' placeholder='Code'><button onclick='pyAdd(\"{sid}\")' class='btn-cu px-3 py-1 rounded text-[10px]'>ADD</button></div><ul id='list-{sid}' class='space-y-1'></ul></div>"
+            y_div.innerHTML = html + "</div>"
             cont.appendChild(y_div)
+            def update_n(e): 
+                notes[name] = e.target.value
+                refresh()
+            document.getElementById(f"ta-{clean}").oninput = create_proxy(update_n)
 
-        # Startup Logic
-        load_from_local()
-        for year in year_list:
-            build_year(year)
+        def save_file():
+            data = json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list})
+            blob = window.Blob.new([data], {type: 'application/json'})
+            url = window.URL.createObjectURL(blob)
+            link = document.createElement('a')
+            link.href, link.download = url, "mcen_plan.json"
+            link.click()
 
-        def add_year_handler(e):
-            new_name = f"Year {len(year_list)+1}"
-            year_list.append(new_name)
-            build_year(new_name)
-            save_to_local()
-        
-        document.getElementById("btn-year").onclick = create_proxy(add_year_handler)
+        def load_file(text):
+            global planner, sems, notes, year_list
+            data = json.loads(text)
+            planner, sems, notes, year_list = data['planner'], data['sems'], data['notes'], data['year_list']
+            document.getElementById("main-container").innerHTML = ""
+            for year in year_list: build_year(year)
+            refresh()
+
+        window.py_add_course, window.py_rem_course = create_proxy(add_course), create_proxy(lambda s, i: (planner[s].pop(int(i)), refresh()))
+        window.py_save_file, window.py_load_file = create_proxy(save_file), create_proxy(load_file)
+
+        raw = window.localStorage.getItem('mcen_planner_data')
+        if raw:
+            d = json.loads(raw)
+            planner, sems, notes, year_list = d.get('planner', planner), d.get('sems', sems), d.get('notes', notes), d.get('year_list', year_list)
+        for y in year_list: build_year(y)
+        document.getElementById("btn-year").onclick = create_proxy(lambda e: (year_list.append(f"Year {len(year_list)+1}"), build_year(year_list[-1]), refresh()))
         document.getElementById("tog-trans").onclick = create_proxy(lambda e: document.getElementById("sec-trans").classList.toggle("hidden"))
         refresh()
     </script>
