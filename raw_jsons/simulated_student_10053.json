@@ -1,0 +1,149 @@
+{
+    "student_hash": "3a83b99e97b81a33d454a4238a5511cf648841b1968e28a4022e5a914eb56be5",
+    "timestamp": "2026-02-19T13:07:54.633205",
+    "base_year": 2023,
+    "planner": {
+        "transfer": [],
+        "FirstYear-Fall": [],
+        "FirstYear-Spring": [
+            {
+                "code": "APPM 2360",
+                "credits": 4
+            },
+            {
+                "code": "APPM 1360",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 3047",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 1030",
+                "credits": 4
+            }
+        ],
+        "FirstYear-Summer": [],
+        "SophomoreYear-Fall": [
+            {
+                "code": "MCEN 4043",
+                "credits": 3
+            },
+            {
+                "code": "COEN 1500",
+                "credits": 1
+            },
+            {
+                "code": "MCEN 3017",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 4026",
+                "credits": 3
+            }
+        ],
+        "SophomoreYear-Spring": [
+            {
+                "code": "PHYS 1140",
+                "credits": 1
+            },
+            {
+                "code": "MCEN 2023",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 2043",
+                "credits": 3
+            }
+        ],
+        "SophomoreYear-Summer": [],
+        "JuniorYear-Fall": [
+            {
+                "code": "MCEN 1025",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 4085",
+                "credits": 3
+            },
+            {
+                "code": "GEEN 1400",
+                "credits": 3
+            }
+        ],
+        "JuniorYear-Spring": [
+            {
+                "code": "MCEN 1024",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 2024",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3030",
+                "credits": 3
+            },
+            {
+                "code": "PHYS 1110",
+                "credits": 4
+            }
+        ],
+        "JuniorYear-Summer": [],
+        "SeniorYear-Fall": [
+            {
+                "code": "APPM 1350",
+                "credits": 4
+            },
+            {
+                "code": "APPM 2350",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 2000",
+                "credits": 1
+            },
+            {
+                "code": "MCEN 4045",
+                "credits": 3
+            }
+        ],
+        "SeniorYear-Spring": [
+            {
+                "code": "MCEN 2063",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3025",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3021",
+                "credits": 3
+            }
+        ],
+        "SeniorYear-Summer": []
+    },
+    "sems": [
+        "transfer",
+        "FirstYear-Fall",
+        "FirstYear-Spring",
+        "FirstYear-Summer",
+        "SophomoreYear-Fall",
+        "SophomoreYear-Spring",
+        "SophomoreYear-Summer",
+        "JuniorYear-Fall",
+        "JuniorYear-Spring",
+        "JuniorYear-Summer",
+        "SeniorYear-Fall",
+        "SeniorYear-Spring",
+        "SeniorYear-Summer"
+    ],
+    "notes": {},
+    "year_list": [
+        "First Year",
+        "Sophomore Year",
+        "Junior Year",
+        "Senior Year"
+    ]
+}

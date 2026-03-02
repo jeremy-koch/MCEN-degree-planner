@@ -1,0 +1,166 @@
+{
+    "student_hash": "2839bcf763d27951fb48786aa83c94d76290a98e3fb43547e9d268b6a7b9a692",
+    "timestamp": "2026-02-20T13:07:54.613751",
+    "base_year": 2025,
+    "planner": {
+        "transfer": [],
+        "FirstYear-Fall": [
+            {
+                "code": "MCEN 1030",
+                "credits": 4
+            },
+            {
+                "code": "APPM 2350",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 2000",
+                "credits": 1
+            },
+            {
+                "code": "MCEN 3030",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 2023",
+                "credits": 3
+            }
+        ],
+        "FirstYear-Spring": [
+            {
+                "code": "MCEN 3012",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 1025",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 4045",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3025",
+                "credits": 3
+            }
+        ],
+        "FirstYear-Summer": [],
+        "SophomoreYear-Fall": [
+            {
+                "code": "MCEN 3017",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3022",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 4026",
+                "credits": 3
+            }
+        ],
+        "SophomoreYear-Spring": [
+            {
+                "code": "APPM 2360",
+                "credits": 4
+            },
+            {
+                "code": "PHYS 1110",
+                "credits": 4
+            },
+            {
+                "code": "PHYS 1140",
+                "credits": 1
+            },
+            {
+                "code": "APPM 1360",
+                "credits": 4
+            }
+        ],
+        "SophomoreYear-Summer": [],
+        "JuniorYear-Fall": [
+            {
+                "code": "COEN 1500",
+                "credits": 1
+            },
+            {
+                "code": "PHYS 1120",
+                "credits": 4
+            },
+            {
+                "code": "GEEN 1400",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 1024",
+                "credits": 3
+            }
+        ],
+        "JuniorYear-Spring": [
+            {
+                "code": "MCEN 3032",
+                "credits": 3
+            },
+            {
+                "code": "APPM 1350",
+                "credits": 4
+            },
+            {
+                "code": "MCEN 4043",
+                "credits": 3
+            }
+        ],
+        "JuniorYear-Summer": [],
+        "SeniorYear-Fall": [
+            {
+                "code": "MCEN 4085",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 2063",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3047",
+                "credits": 4
+            }
+        ],
+        "SeniorYear-Spring": [
+            {
+                "code": "MCEN 2043",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 3021",
+                "credits": 3
+            },
+            {
+                "code": "MCEN 2024",
+                "credits": 3
+            }
+        ],
+        "SeniorYear-Summer": []
+    },
+    "sems": [
+        "transfer",
+        "FirstYear-Fall",
+        "FirstYear-Spring",
+        "FirstYear-Summer",
+        "SophomoreYear-Fall",
+        "SophomoreYear-Spring",
+        "SophomoreYear-Summer",
+        "JuniorYear-Fall",
+        "JuniorYear-Spring",
+        "JuniorYear-Summer",
+        "SeniorYear-Fall",
+        "SeniorYear-Spring",
+        "SeniorYear-Summer"
+    ],
+    "notes": {},
+    "year_list": [
+        "First Year",
+        "Sophomore Year",
+        "Junior Year",
+        "Senior Year"
+    ]
+}

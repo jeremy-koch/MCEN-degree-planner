@@ -31,10 +31,11 @@
             <div class="flex justify-between items-start">
                 <div>
                     <h1 class="text-2xl font-black italic">MCEN <span class="text-[#CFB87C]">PLANNER</span></h1>
-                    <div class="mt-2 no-print">
-                        <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">First Semester at CU</label>
-                        <select id="start-term" class="bg-gray-800 text-white text-xs p-1 rounded border border-gray-600 outline-none cursor-pointer" onchange="pyChangeStart()">
-                            </select>
+                    <div class="mt-4 flex gap-4 no-print">
+                        <div>
+                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Student ID (Hashed on Export)</label>
+                            <input id="student-id" type="password" placeholder="Ex: 109..." class="bg-gray-800 text-white text-xs p-1.5 rounded border border-gray-600 outline-none w-36">
+                        </div>
                     </div>
                 </div>
                 <div class="text-right">
@@ -53,11 +54,11 @@
 
         <div class="bg-white border-x border-b p-3 flex flex-wrap gap-2 no-print justify-between">
             <div class="flex gap-2">
-                <button onclick="window.print()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border">PRINT PDF</button>
-                <button id="tog-trans" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase">+ Transfer</button>
-                <button onclick="pyExport()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase">⬇ Export JSON</button>
-                <label class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase cursor-pointer">
-                    ⬆ Import JSON <input type="file" id="file-upload" class="hidden" onchange="pyImport(event)">
+                <button onclick="window.print()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border hover:bg-gray-100">PRINT PDF</button>
+                <button id="tog-trans" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase hover:bg-gray-100">+ Transfer</button>
+                <button onclick="jsExport()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase hover:bg-gray-100">⬇ Export JSON</button>
+                <label class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase cursor-pointer hover:bg-gray-100">
+                    ⬆ Import JSON <input type="file" id="file-upload" class="hidden" onchange="jsImport(event)">
                 </label>
             </div>
             <button onclick="clearStorage()" class="text-[10px] font-bold px-3 py-1 text-red-600 bg-red-50 rounded hover:bg-red-100 border border-red-200">RESET ALL</button>
@@ -86,24 +87,40 @@
     <script>
         function pyAdd(sid) { window.py_add_course?.(sid, document.getElementById('in-' + sid).value); }
         function pyRem(sid, idx) { window.py_rem_course?.(sid, idx); }
-        function pyExport() { window.py_save_file?.(); }
-        function pyChangeStart() { window.py_set_start?.(document.getElementById('start-term').value); }
-        async function pyImport(e) {
+        
+        async function jsExport() {
+            const jsonString = await window.py_get_export_data?.();
+            const blob = new Blob([jsonString], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url; link.download = "mcen_plan.json"; link.click();
+        }
+
+        async function jsImport(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const text = await file.text();
-            window.py_load_file?.(text);
+            window.py_load_file?.(await file.text());
         }
-        function toggleSummer(n, b) {
-            const el = document.getElementById('row-' + n + '-Summer');
-            el.classList.toggle('show');
-            b.innerText = el.classList.contains('show') ? '- HIDE SUMMER' : '+ ADD SUMMER';
+
+        function toggleSummer(n) {
+            const rows = document.querySelectorAll(`[id^='row-${n}']`);
+            let isShowing = false;
+            rows.forEach(r => {
+                if (r.classList.contains('summer-row')) {
+                    r.classList.toggle('show');
+                    isShowing = r.classList.contains('show');
+                }
+            });
+            const btn = document.getElementById(`btn-sum-${n}`);
+            if(btn) btn.innerText = isShowing ? '- HIDE SUMMER' : '+ ADD SUMMER';
         }
+
         function toggleNotes(n, b) {
             const el = document.getElementById('notes-' + n);
             el.classList.toggle('show');
             b.innerText = el.classList.contains('show') ? '- HIDE NOTES' : '+ ADD NOTES/GOALS';
         }
+
         function clearStorage() { if(confirm("Wipe all data?")) { localStorage.removeItem('mcen_planner_data'); location.reload(); } }
         document.addEventListener('keydown', e => {
             if (e.key === 'Enter' && e.target.classList.contains('enter-listener')) pyAdd(e.target.getAttribute('data-sid'));
@@ -114,6 +131,8 @@
         from pyscript import document, window
         from pyodide.ffi import create_proxy
         import json
+        import hashlib
+        import datetime
 
         CATALOG = { 
             "APPM 1350": {"t": "Calculus 1", "c": 4}, "MCEN 1030": {"t": "Engineering Comp", "c": 4}, 
@@ -130,41 +149,58 @@
             "MCEN 3022": {"t": "Heat Transfer", "c": 3}, "MCEN 4026": {"t": "Manufacturing Processes", "c": 3}, 
             "MCEN 4043": {"t": "System Dynamics", "c": 3}, "MCEN 3032": {"t": "Thermodynamics 2", "c": 3}, 
             "MCEN 3047": {"t": "Data Analysis & Exp Methods", "c": 4}, "MCEN 4045": {"t": "ME Design Project 1", "c": 3}, 
-            "MCEN 4085": {"t": "ME Senior Design 2", "c": 3},
-            "WRITING REQUIREMENT": {"t": "Upper Div Writing", "c": 3},
-            "HSS LOWER 1": {"t": "Humanities/SocSci Lower Div", "c": 3},
-            "HSS LOWER 2": {"t": "Humanities/SocSci Lower Div", "c": 3},
-            "HSS LOWER 3": {"t": "Humanities/SocSci Lower Div", "c": 3},
-            "HSS UPPER 1": {"t": "Humanities/SocSci Upper Div", "c": 3},
-            "HSS UPPER 2": {"t": "Humanities/SocSci Upper Div", "c": 3},
-            "MCEN TECH ELECTIVE 1": {"t": "ME Tech Elective", "c": 3},
-            "MCEN TECH ELECTIVE 2": {"t": "ME Tech Elective", "c": 3},
-            "GENERAL TECH ELECTIVE 1": {"t": "Any Approved Tech Elective", "c": 3},
-            "GENERAL TECH ELECTIVE 2": {"t": "Any Approved Tech Elective", "c": 3},
-            "FREE ELECTIVE 1": {"t": "Any Course", "c": 3},
-            "FREE ELECTIVE 2": {"t": "Any Course", "c": 3}
+            "MCEN 4085": {"t": "ME Senior Design 2", "c": 3}
         }
         
         planner, sems, notes, year_list = {"transfer": []}, ["transfer"], {}, ["First Year", "Sophomore Year", "Junior Year", "Senior Year"]
-        start_term = "Fall 2024"
+        base_year = 2024
 
-        def get_semester_label(year_idx, term_type):
-            start_parts = start_term.split(" ")
-            base_sem, base_year = start_parts[0], int(start_parts[1])
-            sem_map = {"Fall": 0, "Spring": 1, "Summer": 2}
-            
-            total_offset = (year_idx * 3) + term_type + sem_map.get(base_sem, 0)
-            final_year = base_year + (total_offset // 3)
-            sem_names = ["Fall", "Spring", "Summer"]
-            return f"{sem_names[total_offset % 3]} {final_year}"
+        def get_semester_label(year_idx, term_name):
+            y = base_year + year_idx
+            if term_name in ["Spring", "Summer"]: y += 1
+            return f"{term_name} {y}"
 
         def refresh():
             planned_norm = [c['code'].replace(" ","").upper() for s in sems for c in planner[s]]
+            
             for i, y_name in enumerate(year_list):
-                for tidx, t_name in enumerate(["Fall", "Spring", "Summer"]):
-                    sid = f"{y_name.replace(' ','')}-{t_name}"
+                clean = y_name.replace(" ", "")
+                has_summer_shown = False
+                
+                for t_name in ["Fall", "Spring", "Summer"]:
+                    sid = f"{clean}-{t_name}"
+                    actual_term = get_semester_label(i, t_name)
                     lbl = document.getElementById(f"lbl-{sid}")
-                    if lbl: lbl.innerText = get_semester_label(i, tidx)
+                    
+                    if lbl:
+                        if sid == "FirstYear-Fall":
+                            lbl.innerText = "FALL"
+                            sel = document.getElementById("base-year-select")
+                            if sel and sel.options.length == 0:
+                                for y in range(2020, 2030):
+                                    opt = document.createElement("option")
+                                    opt.value, opt.innerText = str(y), str(y)
+                                    sel.appendChild(opt)
+                                sel.value = str(base_year)
+                        else:
+                            lbl.innerText = actual_term.upper()
+
+                    row = document.getElementById(f"row-{sid}")
+                    if row:
+                        row.classList.remove("hidden") # Fallback to strip hidden if it lingers
+                        if t_name == "Summer":
+                            row.classList.add("summer-row")
+                            if planner[sid] or row.classList.contains("show"):
+                                row.classList.add("show")
+                                has_summer_shown = True
+                            else:
+                                row.classList.remove("show")
+                        else:
+                            row.classList.remove("summer-row")
+                            row.classList.remove("show")
+                
+                btn = document.getElementById(f"btn-sum-{clean}")
+                if btn: btn.innerText = "- HIDE SUMMER" if has_summer_shown else "+ ADD SUMMER"
 
             bank = document.getElementById("req-bank")
             bank.innerHTML = ""
@@ -196,23 +232,30 @@
                 if document.getElementById(f"sub-{sid}"): document.getElementById(f"sub-{sid}").innerText = str(sub)
                 grand_total += sub
             document.getElementById("grand-total").innerText = str(grand_total)
-            window.localStorage.setItem('mcen_planner_data', json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list, "start_term": start_term}))
+            window.localStorage.setItem('mcen_planner_data', json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list, "base_year": base_year}))
 
         def build_year(name):
             cont = document.getElementById("main-container")
             y_div = document.createElement("div")
             clean = name.replace(" ", "")
             note_content = notes.get(name, "")
-            html = f"<div class='mb-2 flex justify-between items-end border-b-4 border-black pb-1'><h3 class='text-xl font-black italic uppercase tracking-tighter'>{name}</h3><div class='flex gap-4 no-print'><button onclick='toggleNotes(\"{clean}\", this)' class='text-[10px] font-bold text-gray-400'>+ NOTES</button><button onclick='toggleSummer(\"{clean}\", this)' class='text-[10px] font-bold text-amber-600'>+ SUMMER</button></div></div><div id='notes-{clean}' class='notes-area mb-4 {'show' if note_content else ''}'><textarea id='ta-{clean}' class='w-full p-2 text-xs border rounded bg-gray-50' rows='2' placeholder='Goals...'>{note_content}</textarea></div><div class='flex flex-col gap-4'>"
+            html = f"<div class='mb-2 flex justify-between items-end border-b-4 border-black pb-1'><h3 class='text-xl font-black italic uppercase tracking-tighter'>{name}</h3><div class='flex gap-4 no-print'><button onclick='toggleNotes(\"{clean}\", this)' class='text-[10px] font-bold text-gray-400'>+ NOTES</button><button id='btn-sum-{clean}' onclick='toggleSummer(\"{clean}\")' class='text-[10px] font-bold text-amber-600'>+ ADD SUMMER</button></div></div><div id='notes-{clean}' class='notes-area mb-4 {'show' if note_content else ''}'><textarea id='ta-{clean}' class='w-full p-2 text-xs border rounded bg-gray-50' rows='2' placeholder='Goals...'>{note_content}</textarea></div><div class='flex flex-col gap-4'>"
+            
             for t in ["Fall", "Spring", "Summer"]:
                 sid = f"{clean}-{t}"
                 if sid not in sems: sems.append(sid)
                 if sid not in planner: planner[sid] = []
-                is_sum = "summer-row" if t == "Summer" and not planner[sid] else ("summer-row show" if t == "Summer" else "")
+                
+                # Only inject the dropdown if it is FirstYear-Fall
+                dropdown_html = "<select id='base-year-select' onchange='window.py_change_year()' class='ml-2 border border-gray-300 rounded text-xs bg-gray-50 px-1 py-0.5 outline-none cursor-pointer'></select>" if sid == "FirstYear-Fall" else ""
+                
                 html += f"""
-                <div id='row-{sid}' class='bg-white p-4 rounded border shadow-sm {is_sum}'>
+                <div id='row-{sid}' class='bg-white p-4 rounded border shadow-sm {'summer-row' if t == 'Summer' else ''}'>
                     <div class='flex justify-between items-center mb-3'>
-                        <div><span class='font-black text-xs uppercase mr-2'>{t}</span><span id='lbl-{sid}' class='text-[10px] font-mono text-gray-400'></span></div>
+                        <div class='flex items-center'>
+                            <span id='lbl-{sid}' class='font-black text-xs mr-2'></span>
+                            {dropdown_html}
+                        </div>
                         <span class='text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded'>HRS: <span id='sub-{sid}'>0</span></span>
                     </div>
                     <div class='flex gap-1 mb-2 no-print'>
@@ -225,28 +268,40 @@
             def update_n(e): (notes.update({name: e.target.value}), refresh())
             document.getElementById(f"ta-{clean}").oninput = create_proxy(update_n)
 
+        def get_export_data():
+            raw_id = document.getElementById("student-id").value.strip()
+            salt = "MCEN_Secr3t_S@lt_2026!" 
+            hashed_id = hashlib.sha256(f"{salt}{raw_id}".encode()).hexdigest() if raw_id else "anonymous"
+            
+            return json.dumps({
+                "student_hash": hashed_id,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "base_year": base_year,
+                "planner": planner,
+                "sems": sems,
+                "notes": notes,
+                "year_list": year_list
+            })
+
+        def load_file(text):
+            global planner, sems, notes, year_list, base_year
+            data = json.loads(text)
+            planner, sems, notes, year_list = data['planner'], data['sems'], data['notes'], data['year_list']
+            base_year = data.get('base_year', 2024)
+            document.getElementById("main-container").innerHTML = ""
+            for year in year_list: build_year(year)
+            refresh()
+
         window.py_add_course = create_proxy(lambda sid, val: (val.strip().upper() in CATALOG and planner[sid].append({"code": val.strip().upper(), "credits": CATALOG[val.strip().upper()]['c']}), refresh()))
         window.py_rem_course = create_proxy(lambda s, i: (planner[s].pop(int(i)), refresh()))
-        window.py_save_file = create_proxy(lambda: (link := document.createElement('a'), setattr(link, 'href', window.URL.createObjectURL(window.Blob.new([json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list, "start_term": start_term})], {type: 'application/json'}))), setattr(link, 'download', 'mcen_plan.json'), link.click()))
-        window.py_load_file = create_proxy(lambda text: (data := json.loads(text), globals().update(planner=data['planner'], sems=data['sems'], notes=data['notes'], year_list=data['year_list'], start_term=data.get('start_term', "Fall 2024")), setattr(document.getElementById("start-term"), 'value', start_term), setattr(document.getElementById("main-container"), 'innerHTML', ""), [build_year(y) for y in year_list], refresh()))
-        window.py_set_start = create_proxy(lambda val: (globals().update(start_term=val), refresh()))
-
-        # Build limited term list (No Summer)
-        st_select = document.getElementById("start-term")
-        for y in range(2020, 2027):
-            for s in ["Fall", "Spring"]:
-                if y == 2026 and s == "Spring": continue # End at Fall 2026
-                opt = document.createElement("option")
-                opt.value = f"{s} {y}"
-                opt.innerText = f"{s} {y}"
-                if f"{s} {y}" == "Fall 2024": opt.selected = True
-                st_select.appendChild(opt)
+        window.py_get_export_data = create_proxy(get_export_data)
+        window.py_load_file = create_proxy(load_file)
+        window.py_change_year = create_proxy(lambda: (globals().update(base_year=int(document.getElementById('base-year-select').value)), refresh()))
 
         raw = window.localStorage.getItem('mcen_planner_data')
         if raw:
             d = json.loads(raw)
-            planner, sems, notes, year_list, start_term = d.get('planner', planner), d.get('sems', sems), d.get('notes', notes), d.get('year_list', year_list), d.get('start_term', start_term)
-            st_select.value = start_term
+            planner, sems, notes, year_list, base_year = d.get('planner', planner), d.get('sems', sems), d.get('notes', notes), d.get('year_list', year_list), d.get('base_year', base_year)
         
         for y in year_list: build_year(y)
         document.getElementById("btn-year").onclick = create_proxy(lambda e: (year_list.append(f"Year {len(year_list)+1}"), build_year(year_list[-1]), refresh()))
