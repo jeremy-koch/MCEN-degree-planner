@@ -28,14 +28,21 @@
     <div class="max-w-3xl mx-auto">
         
         <header class="bg-black text-white p-6 rounded-t-2xl border-b-4 border-[#CFB87C]">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-black italic">MCEN <span class="text-[#CFB87C]">PLANNER</span></h1>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-black italic">MCEN <span class="text-[#CFB87C]">PLANNER</span></h1>
+                    <div class="mt-2 no-print">
+                        <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">First Semester at CU</label>
+                        <select id="start-term" class="bg-gray-800 text-white text-xs p-1 rounded border border-gray-600 outline-none cursor-pointer" onchange="pyChangeStart()">
+                            </select>
+                    </div>
+                </div>
                 <div class="text-right">
                     <div id="grand-total" class="text-3xl font-mono font-bold text-[#CFB87C]">0</div>
                     <div class="text-[9px] uppercase font-bold text-gray-400">Total Credits</div>
                 </div>
             </div>
-            <div class="mt-4">
+            <div class="mt-6">
                 <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
                     <span>Degree Progress</span>
                     <span id="prog-txt">0%</span>
@@ -80,6 +87,7 @@
         function pyAdd(sid) { window.py_add_course?.(sid, document.getElementById('in-' + sid).value); }
         function pyRem(sid, idx) { window.py_rem_course?.(sid, idx); }
         function pyExport() { window.py_save_file?.(); }
+        function pyChangeStart() { window.py_set_start?.(document.getElementById('start-term').value); }
         async function pyImport(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -138,12 +146,29 @@
         }
         
         planner, sems, notes, year_list = {"transfer": []}, ["transfer"], {}, ["First Year", "Sophomore Year", "Junior Year", "Senior Year"]
+        start_term = "Fall 2024"
+
+        def get_semester_label(year_idx, term_type):
+            start_parts = start_term.split(" ")
+            base_sem, base_year = start_parts[0], int(start_parts[1])
+            sem_map = {"Fall": 0, "Spring": 1, "Summer": 2}
+            
+            total_offset = (year_idx * 3) + term_type + sem_map.get(base_sem, 0)
+            final_year = base_year + (total_offset // 3)
+            sem_names = ["Fall", "Spring", "Summer"]
+            return f"{sem_names[total_offset % 3]} {final_year}"
 
         def refresh():
-            grand_total, core_count = 0, 0
             planned_norm = [c['code'].replace(" ","").upper() for s in sems for c in planner[s]]
+            for i, y_name in enumerate(year_list):
+                for tidx, t_name in enumerate(["Fall", "Spring", "Summer"]):
+                    sid = f"{y_name.replace(' ','')}-{t_name}"
+                    lbl = document.getElementById(f"lbl-{sid}")
+                    if lbl: lbl.innerText = get_semester_label(i, tidx)
+
             bank = document.getElementById("req-bank")
             bank.innerHTML = ""
+            core_count = 0
             for code, data in CATALOG.items():
                 if code.replace(" ","").upper() not in planned_norm:
                     span = document.createElement("span")
@@ -154,9 +179,9 @@
                 else: core_count += 1
             
             perc = int((core_count/len(CATALOG))*100)
-            document.getElementById("prog-bar").style.width = f"{perc}%"
-            document.getElementById("prog-txt").innerText = f"{perc}%"
+            document.getElementById("prog-bar").style.width, document.getElementById("prog-txt").innerText = f"{perc}%", f"{perc}%"
 
+            grand_total = 0
             for sid in sems:
                 el = document.getElementById(f"list-{sid}")
                 if not el: continue
@@ -168,23 +193,10 @@
                     li.className = "flex justify-between items-center bg-white p-2 rounded border text-xs font-mono shadow-sm"
                     li.innerHTML = f"<span><b>{c['code']}</b></span><button onclick='pyRem(\"{sid}\", {i})' class='text-red-500 font-bold'>[X]</button>"
                     el.appendChild(li)
-                grand_total += sub
                 if document.getElementById(f"sub-{sid}"): document.getElementById(f"sub-{sid}").innerText = str(sub)
+                grand_total += sub
             document.getElementById("grand-total").innerText = str(grand_total)
-            window.localStorage.setItem('mcen_planner_data', json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list}))
-
-        def add_course(sid, val):
-            val = val.strip().upper()
-            match = None
-            if val in CATALOG: match = val
-            else:
-                fuzzy = val if " " in val else f"{val[:4]} {val[4:]}"
-                if fuzzy in CATALOG: match = fuzzy
-            
-            if match:
-                planner[sid].append({"code": match, "credits": CATALOG[match]['c']})
-                document.getElementById(f"in-{sid}").value = ""
-                refresh()
+            window.localStorage.setItem('mcen_planner_data', json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list, "start_term": start_term}))
 
         def build_year(name):
             cont = document.getElementById("main-container")
@@ -197,37 +209,45 @@
                 if sid not in sems: sems.append(sid)
                 if sid not in planner: planner[sid] = []
                 is_sum = "summer-row" if t == "Summer" and not planner[sid] else ("summer-row show" if t == "Summer" else "")
-                html += f"<div id='row-{sid}' class='bg-white p-4 rounded border shadow-sm {is_sum}'><div class='flex justify-between items-center mb-3'><span class='font-black text-xs uppercase'>{t}</span><span class='text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded'>HRS: <span id='sub-{sid}'>0</span></span></div><div class='flex gap-1 mb-2 no-print'><input id='in-{sid}' class='border p-2 text-[10px] rounded flex-1 font-mono enter-listener' data-sid='{sid}' placeholder='Code'><button onclick='pyAdd(\"{sid}\")' class='btn-cu px-3 py-1 rounded text-[10px]'>ADD</button></div><ul id='list-{sid}' class='space-y-1'></ul></div>"
+                html += f"""
+                <div id='row-{sid}' class='bg-white p-4 rounded border shadow-sm {is_sum}'>
+                    <div class='flex justify-between items-center mb-3'>
+                        <div><span class='font-black text-xs uppercase mr-2'>{t}</span><span id='lbl-{sid}' class='text-[10px] font-mono text-gray-400'></span></div>
+                        <span class='text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded'>HRS: <span id='sub-{sid}'>0</span></span>
+                    </div>
+                    <div class='flex gap-1 mb-2 no-print'>
+                        <input id='in-{sid}' class='border p-2 text-[10px] rounded flex-1 font-mono enter-listener' data-sid='{sid}' placeholder='Code'>
+                        <button onclick='pyAdd("{sid}")' class='btn-cu px-3 py-1 rounded text-[10px]'>ADD</button>
+                    </div><ul id='list-{sid}' class='space-y-1'></ul>
+                </div>"""
             y_div.innerHTML = html + "</div>"
             cont.appendChild(y_div)
-            def update_n(e): 
-                notes[name] = e.target.value
-                refresh()
+            def update_n(e): (notes.update({name: e.target.value}), refresh())
             document.getElementById(f"ta-{clean}").oninput = create_proxy(update_n)
 
-        def save_file():
-            data = json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list})
-            blob = window.Blob.new([data], {type: 'application/json'})
-            url = window.URL.createObjectURL(blob)
-            link = document.createElement('a')
-            link.href, link.download = url, "mcen_plan.json"
-            link.click()
+        window.py_add_course = create_proxy(lambda sid, val: (val.strip().upper() in CATALOG and planner[sid].append({"code": val.strip().upper(), "credits": CATALOG[val.strip().upper()]['c']}), refresh()))
+        window.py_rem_course = create_proxy(lambda s, i: (planner[s].pop(int(i)), refresh()))
+        window.py_save_file = create_proxy(lambda: (link := document.createElement('a'), setattr(link, 'href', window.URL.createObjectURL(window.Blob.new([json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list, "start_term": start_term})], {type: 'application/json'}))), setattr(link, 'download', 'mcen_plan.json'), link.click()))
+        window.py_load_file = create_proxy(lambda text: (data := json.loads(text), globals().update(planner=data['planner'], sems=data['sems'], notes=data['notes'], year_list=data['year_list'], start_term=data.get('start_term', "Fall 2024")), setattr(document.getElementById("start-term"), 'value', start_term), setattr(document.getElementById("main-container"), 'innerHTML', ""), [build_year(y) for y in year_list], refresh()))
+        window.py_set_start = create_proxy(lambda val: (globals().update(start_term=val), refresh()))
 
-        def load_file(text):
-            global planner, sems, notes, year_list
-            data = json.loads(text)
-            planner, sems, notes, year_list = data['planner'], data['sems'], data['notes'], data['year_list']
-            document.getElementById("main-container").innerHTML = ""
-            for year in year_list: build_year(year)
-            refresh()
-
-        window.py_add_course, window.py_rem_course = create_proxy(add_course), create_proxy(lambda s, i: (planner[s].pop(int(i)), refresh()))
-        window.py_save_file, window.py_load_file = create_proxy(save_file), create_proxy(load_file)
+        # Build limited term list (No Summer)
+        st_select = document.getElementById("start-term")
+        for y in range(2020, 2027):
+            for s in ["Fall", "Spring"]:
+                if y == 2026 and s == "Spring": continue # End at Fall 2026
+                opt = document.createElement("option")
+                opt.value = f"{s} {y}"
+                opt.innerText = f"{s} {y}"
+                if f"{s} {y}" == "Fall 2024": opt.selected = True
+                st_select.appendChild(opt)
 
         raw = window.localStorage.getItem('mcen_planner_data')
         if raw:
             d = json.loads(raw)
-            planner, sems, notes, year_list = d.get('planner', planner), d.get('sems', sems), d.get('notes', notes), d.get('year_list', year_list)
+            planner, sems, notes, year_list, start_term = d.get('planner', planner), d.get('sems', sems), d.get('notes', notes), d.get('year_list', year_list), d.get('start_term', start_term)
+            st_select.value = start_term
+        
         for y in year_list: build_year(y)
         document.getElementById("btn-year").onclick = create_proxy(lambda e: (year_list.append(f"Year {len(year_list)+1}"), build_year(year_list[-1]), refresh()))
         document.getElementById("tog-trans").onclick = create_proxy(lambda e: document.getElementById("sec-trans").classList.toggle("hidden"))
