@@ -10,6 +10,7 @@
             --cu-black: #000000;
             --light-gray: #f4f4f4;
             --border-color: #ddd;
+            --summer-blue: #f0faff;
             --error-red: #f8d7da;
             --error-border: #dc3545;
             --error-text: #721c24;
@@ -28,11 +29,10 @@
         .catalog-container { padding: 15px; overflow-y: auto; flex-grow: 1; }
         .course-pill {
             background-color: var(--light-gray); border: 1px solid var(--border-color);
-            padding: 10px; margin-bottom: 8px; border-radius: 4px; cursor: grab;
+            padding: 8px 10px; margin-bottom: 8px; border-radius: 4px; cursor: grab;
             display: flex; justify-content: space-between; align-items: center;
-            font-weight: 500; transition: 0.2s;
+            font-size: 0.9em; font-weight: 500; transition: 0.2s;
         }
-        .course-pill:hover { background-color: #e2e2e2; }
         .credits-badge { background: var(--cu-gold); color: var(--cu-black); padding: 2px 6px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
 
         /* --- Main Content --- */
@@ -43,19 +43,26 @@
         }
         .controls input, .controls select { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; }
         .template-group { display: flex; gap: 5px; align-items: center; border-left: 2px solid var(--border-color); padding-left: 15px; }
-        .btn-group { margin-left: auto; display: flex; gap: 10px; }
         
-        button.action-btn { background-color: #eee; border: 1px solid #ccc; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button.action-btn { background-color: #eee; border: 1px solid #ccc; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        button.action-btn:hover { background-color: #ddd; }
         button.export-btn { background-color: var(--cu-gold); border: none; }
+        button.clear-btn { background-color: #fff1f1; border-color: #f5c6cb; color: #721c24; }
+        button.clear-btn:hover { background-color: #f8d7da; }
 
         /* --- Grid --- */
         .planner-grid { padding: 20px; }
-        .year-row { background: white; margin-bottom: 20px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .year-title { margin-top: 0; border-bottom: 2px solid var(--cu-gold); padding-bottom: 5px; }
-        .semesters { display: flex; gap: 15px; margin-top: 15px; }
-        .semester-box { flex: 1; background: var(--light-gray); border: 2px dashed var(--border-color); border-radius: 6px; min-height: 120px; padding: 10px; position: relative; }
+        .year-row { background: white; margin-bottom: 25px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .year-title { margin-top: 0; border-bottom: 2px solid var(--cu-gold); padding-bottom: 5px; margin-bottom: 15px; }
+        .semesters { display: flex; gap: 10px; }
+        
+        .semester-box { 
+            flex: 1; background: var(--light-gray); border: 2px dashed var(--border-color); 
+            border-radius: 6px; min-height: 150px; padding: 10px; transition: 0.2s;
+        }
+        .semester-box[data-sid*="Summer"] { background-color: var(--summer-blue); border-style: dotted; }
         .semester-box.drag-over { background-color: #e8f4f8; border-color: #8bbdd9; }
-        .semester-title { font-size: 0.8em; text-transform: uppercase; color: #777; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .semester-title { font-size: 0.75em; text-transform: uppercase; color: #777; font-weight: bold; text-align: center; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
 
         /* --- Course Styling --- */
         .dropped-course {
@@ -64,37 +71,22 @@
             font-size: 0.85em; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .course-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        .dropped-course.prereq-error {
-            background-color: var(--error-red) !important;
-            border: 2px solid var(--error-border) !important;
-        }
-        .error-label {
-            display: none; color: var(--error-text); font-size: 0.75em; font-weight: bold;
-            margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.1);
-        }
+        .dropped-course.prereq-error { background-color: var(--error-red) !important; border: 2px solid var(--error-border) !important; }
+        .error-label { display: none; color: var(--error-text); font-size: 0.75em; font-weight: bold; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.1); }
         .prereq-error .error-label { display: block; }
         .remove-btn { color: red; cursor: pointer; font-weight: bold; border: none; background: none; font-size: 1.1em; }
-
-        /* --- Notes --- */
-        .note-container { display: none; margin-top: 10px; }
-        .note-container.active { display: block; }
-        .note-container textarea { width: 100%; height: 50px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <div class="sidebar-header">
-            <h2>ME Catalog</h2>
-        </div>
+        <div class="sidebar-header"><h2>ME Catalog</h2></div>
         <div class="catalog-container" id="catalog"></div>
     </div>
 
     <div id="main-content">
         <div class="controls">
             <input type="text" id="studentName" placeholder="Student ID">
-            <input type="number" id="baseYear" value="2024" style="width: 80px;">
-            
             <div class="template-group">
                 <select id="planTemplate">
                     <option value="">-- Select Template --</option>
@@ -103,23 +95,24 @@
                 </select>
                 <button class="action-btn" onclick="applyTemplate()">Apply</button>
             </div>
-
-            <div class="btn-group">
-                <button class="action-btn" onclick="duplicatePlan()">Duplicate Tab</button>
+            <button class="action-btn" onclick="duplicatePlan()">Duplicate Plan</button>
+            
+            <div style="margin-left: auto; display: flex; gap: 8px;">
+                <button class="action-btn clear-btn" onclick="clearPlan()">Clear Plan</button>
                 <button class="action-btn export-btn" onclick="exportJSON()">Export JSON</button>
             </div>
         </div>
 
         <div class="planner-grid" id="planner">
-            <div class="year-row" style="background: #f0f7ff;">
-                <h3 class="year-title">Prior / Transfer Credits</h3>
+            <div class="year-row" style="background: #f0f7ff; border: 1px solid #cce7ff;">
+                <h3 class="year-title">Transfer / AP Credits</h3>
                 <div class="semesters">
-                    <div class="semester-box" data-sid="transfer" ondrop="handleDrop(event)" ondragover="handleDragOver(event)">
-                        <div class="semester-title">Transfer Credits</div>
+                    <div class="semester-box" data-sid="transfer" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="semester-title">Prior to CU</div>
                     </div>
                 </div>
             </div>
-            </div>
+        </div>
     </div>
 
     <script>
@@ -135,32 +128,18 @@
         };
 
         const PREREQS = {
-            "APPM 1360": ["APPM 1350"],
-            "PHYS 1120": ["PHYS 1110"],
-            "APPM 2350": ["APPM 1360"],
-            "APPM 2360": ["APPM 1360"],
-            "MCEN 2023": ["APPM 1360", "PHYS 1110"],
-            "MCEN 2063": ["MCEN 2023"],
-            "MCEN 2043": ["MCEN 2023"],
-            "MCEN 3012": ["MCEN 2023"],
-            "MCEN 3021": ["MCEN 2023", "APPM 2350"],
-            "MCEN 3022": ["MCEN 3021"],
-            "MCEN 3030": ["MCEN 2023"],
-            "MCEN 4043": ["MCEN 3030"],
-            "MCEN 3032": ["MCEN 2024", "MCEN 2063"],
-            "MCEN 3047": ["MCEN 2024", "MCEN 2063"],
-            "MCEN 4045": ["MCEN 3022", "MCEN 3030"],
-            "MCEN 4085": ["MCEN 4045"],
-            "ECEN 3010": ["PHYS 1120", "APPM 2360"]
+            "APPM 1360": ["APPM 1350"], "PHYS 1120": ["PHYS 1110"], "APPM 2350": ["APPM 1360"],
+            "APPM 2360": ["APPM 1360"], "MCEN 2023": ["APPM 1360", "PHYS 1110"], "MCEN 2063": ["MCEN 2023"],
+            "MCEN 2043": ["MCEN 2023"], "MCEN 3012": ["MCEN 2023"], "MCEN 3021": ["MCEN 2023", "APPM 2350"],
+            "MCEN 3022": ["MCEN 3021"], "MCEN 3030": ["MCEN 2023"], "MCEN 4043": ["MCEN 3030"],
+            "MCEN 3032": ["MCEN 2024", "MCEN 2063"], "MCEN 3047": ["MCEN 2024", "MCEN 2063"],
+            "MCEN 4045": ["MCEN 3022", "MCEN 3030"], "MCEN 4085": ["MCEN 4045"], "ECEN 3010": ["PHYS 1120", "APPM 2360"]
         };
 
-        const COREQS = {
-            "PHYS 1140": ["PHYS 1120"],
-            "MCEN 1025": ["APPM 1350"]
-        };
+        const COREQS = { "PHYS 1140": ["PHYS 1120"], "MCEN 1025": ["APPM 1350"] };
 
         const YEAR_LIST = ["First Year", "Sophomore Year", "Junior Year", "Senior Year"];
-        const TERMS = ["Fall", "Spring"];
+        const TERMS = ["Fall", "Spring", "Summer"];
         const SEM_ORDER = ["transfer"]; 
         YEAR_LIST.forEach(y => TERMS.forEach(t => SEM_ORDER.push(y.replace(/\s/g, '') + "-" + t)));
 
@@ -169,25 +148,30 @@
                 "FirstYear-Fall": ["GEEN 1400", "MCEN 1030", "APPM 1350", "PHYS 1110"],
                 "FirstYear-Spring": ["MCEN 1025", "MCEN 1024", "APPM 1360", "PHYS 1120", "PHYS 1140"],
                 "SophomoreYear-Fall": ["H&SS Lower Div", "MCEN 2000", "MCEN 2024", "APPM 2350", "MCEN 2023"],
-                "SophomoreYear-Spring": ["H&SS Lower Div", "Free Elective", "MCEN 3012", "APPM 2360", "MCEN 2063", "MCEN 2043"],
-                "JuniorYear-Fall": ["H&SS Lower Div", "MCEN 3025", "MCEN 3030", "ECEN 3010", "MCEN 3021"],
-                "JuniorYear-Spring": ["Writing", "MCEN 4026", "Gen Tech Elective", "MCEN 3022", "MCEN 4043"],
-                "SeniorYear-Fall": ["H&SS Upper Div", "MCEN 4045", "MCEN 3032", "ME Tech Elective", "MCEN 3047"],
-                "SeniorYear-Spring": ["H&SS Upper Div", "MCEN 4085", "Free Elective", "ME Tech Elective", "Gen Tech Elective"]
+                "SophomoreYear-Spring": ["H&SS Lower Div", "Free Elective", "MCEN 3012", "APPM 2360", "MCEN 2063", "MCEN 2043"]
             },
             "green_plan": {
                 "FirstYear-Fall": ["H&SS Lower Div", "GEEN 1400", "MCEN 1024", "APPM 1350"],
-                "FirstYear-Spring": ["H&SS Lower Div", "H&SS Lower Div", "PHYS 1110", "APPM 1360", "MCEN 1030"],
-                "SophomoreYear-Fall": ["Free Elective", "PHYS 1140", "PHYS 1120", "APPM 2350", "MCEN 1025", "MCEN 2000"],
-                "SophomoreYear-Spring": ["H&SS Upper Div", "Free Elective", "MCEN 2023", "APPM 2360", "ECEN 3010", "MCEN 2024"],
-                "JuniorYear-Fall": ["Writing", "MCEN 2063", "MCEN 2043", "MCEN 3012", "MCEN 4026"],
-                "JuniorYear-Spring": ["H&SS Upper Div", "MCEN 3021", "MCEN 3030", "MCEN 3025", "MCEN 3047"],
-                "SeniorYear-Fall": ["MCEN 4045", "MCEN 3022", "MCEN 4043", "ME Tech Elective"],
-                "SeniorYear-Spring": ["MCEN 3032", "MCEN 4085", "Gen Tech Elective", "Gen Tech Elective", "ME Tech Elective"]
+                "FirstYear-Spring": ["H&SS Lower Div", "H&SS Lower Div", "PHYS 1110", "APPM 1360", "MCEN 1030"]
             }
         };
 
-        function init() { renderCatalog(); renderPlanner(); }
+        function init() {
+            renderCatalog();
+            renderPlanner();
+            const urlParams = new URLSearchParams(window.location.search);
+            const savedPlan = urlParams.get('plan');
+            if (savedPlan) {
+                try {
+                    const data = JSON.parse(decodeURIComponent(savedPlan));
+                    Object.entries(data).forEach(([sid, courses]) => {
+                        const box = document.querySelector(`[data-sid="${sid}"]`);
+                        if (box) courses.forEach(c => createCourseDOM(c, box));
+                    });
+                    validateAllPrereqs();
+                } catch(e) { console.error("URL Load Failed", e); }
+            }
+        }
 
         function renderCatalog() {
             const cat = document.getElementById('catalog');
@@ -210,10 +194,9 @@
                 row.className = 'year-row';
                 let sems = '';
                 TERMS.forEach(t => {
-                    const sid = `${cleanY}-${t}`;
-                    sems += `<div class="semester-box" data-sid="${sid}" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"><div class="semester-title">${t}</div></div>`;
+                    sems += `<div class="semester-box" data-sid="${cleanY}-${t}" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"><div class="semester-title">${t}</div></div>`;
                 });
-                row.innerHTML = `<h3 class="year-title">${y}</h3><div class="semesters">${sems}</div><button class="action-btn" onclick="toggleNote('${cleanY}')" style="margin-top:10px; font-size: 0.7em;">+ Notes</button><div class="note-container" id="nc-${cleanY}"><textarea placeholder="Yearly notes..."></textarea></div>`;
+                row.innerHTML = `<h3 class="year-title">${y}</h3><div class="semesters">${sems}</div>`;
                 p.appendChild(row);
             });
         }
@@ -228,27 +211,21 @@
                 const code = pill.dataset.code;
                 const sid = pill.closest('.semester-box').dataset.sid;
                 const errorLabel = pill.querySelector('.error-label');
-                
-                const pre = PREREQS[code] || [];
-                const co = COREQS[code] || [];
                 const myIndex = SEM_ORDER.indexOf(sid);
 
-                let missingPre = pre.filter(req => {
+                const missingPre = (PREREQS[code] || []).filter(req => {
                     for (let i = 0; i < myIndex; i++) if (courseMap[SEM_ORDER[i]]?.includes(req)) return false;
                     return true;
                 });
 
-                let missingCo = co.filter(req => {
+                const missingCo = (COREQS[code] || []).filter(req => {
                     for (let i = 0; i <= myIndex; i++) if (courseMap[SEM_ORDER[i]]?.includes(req)) return false;
                     return true;
                 });
 
                 if (missingPre.length > 0 || missingCo.length > 0) {
                     pill.classList.add('prereq-error');
-                    let msg = "";
-                    if (missingPre.length > 0) msg += `Need Pre-req: ${missingPre.join(', ')}. `;
-                    if (missingCo.length > 0) msg += `Need Co-req: ${missingCo.join(', ')}.`;
-                    errorLabel.innerText = "⚠ " + msg;
+                    errorLabel.innerText = "⚠ " + (missingPre.length ? `Pre: ${missingPre.join(', ')} ` : "") + (missingCo.length ? `Co: ${missingCo.join(', ')}` : "");
                 } else {
                     pill.classList.remove('prereq-error');
                     errorLabel.innerText = "";
@@ -260,13 +237,11 @@
             ev.preventDefault();
             const box = ev.currentTarget.closest('.semester-box');
             box.classList.remove('drag-over');
-            const data = JSON.parse(ev.dataTransfer.getData("application/json"));
-            
-            if (data.source === 'catalog') {
-                createCourseDOM(data.code, box);
-            } else {
-                box.appendChild(document.getElementById(data.elId));
-            }
+            const dataStr = ev.dataTransfer.getData("application/json");
+            if (!dataStr) return;
+            const data = JSON.parse(dataStr);
+            if (data.source === 'catalog') { createCourseDOM(data.code, box); }
+            else { const el = document.getElementById(data.elId); if (el) box.appendChild(el); }
             validateAllPrereqs();
         }
 
@@ -277,38 +252,44 @@
             div.draggable = true;
             div.dataset.code = code;
             div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({elId: div.id, source: 'sem'}));
-            
-            div.innerHTML = `
-                <div class="course-header">
-                    <strong>${code}</strong>
-                    <button class="remove-btn" onclick="this.closest('.dropped-course').remove(); validateAllPrereqs();">&times;</button>
-                </div>
-                <div class="error-label"></div>
-            `;
+            div.innerHTML = `<div class="course-header"><strong>${code}</strong><button class="remove-btn" onclick="this.closest('.dropped-course').remove(); validateAllPrereqs();">&times;</button></div><div class="error-label"></div>`;
             box.appendChild(div);
         }
 
         function applyTemplate() {
             const key = document.getElementById('planTemplate').value;
             if (!key) return;
+            if (document.querySelectorAll('.dropped-course').length > 0) {
+                if (!confirm("This will replace your current courses. Proceed?")) return;
+            }
             document.querySelectorAll('.dropped-course').forEach(c => c.remove());
-            const plan = TEMPLATES[key];
-            for (const [sid, courses] of Object.entries(plan)) {
+            Object.entries(TEMPLATES[key]).forEach(([sid, courses]) => {
                 const box = document.querySelector(`[data-sid="${sid}"]`);
                 if (box) courses.forEach(c => createCourseDOM(c, box));
-            }
+            });
             validateAllPrereqs();
+        }
+
+        function clearPlan() {
+            if (confirm("Are you sure you want to remove ALL courses from your plan?")) {
+                document.querySelectorAll('.dropped-course').forEach(c => c.remove());
+                // Also clean up the URL to prevent re-load on refresh
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        function duplicatePlan() {
+            const plan = {};
+            document.querySelectorAll('.semester-box').forEach(box => {
+                const courses = Array.from(box.querySelectorAll('.dropped-course')).map(c => c.dataset.code);
+                if (courses.length) plan[box.dataset.sid] = courses;
+            });
+            const serialized = encodeURIComponent(JSON.stringify(plan));
+            window.open(window.location.origin + window.location.pathname + '?plan=' + serialized, '_blank');
         }
 
         function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
         function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-        function toggleNote(id) { document.getElementById('nc-'+id).classList.toggle('active'); }
-
-        function duplicatePlan() {
-            const data = { sid: document.getElementById('studentName').value, year: document.getElementById('baseYear').value };
-            window.open(window.location.href, '_blank');
-        }
-
         function exportJSON() {
             const plan = {};
             document.querySelectorAll('.semester-box').forEach(box => {
@@ -317,7 +298,7 @@
             const blob = new Blob([JSON.stringify(plan, null, 2)], {type: 'application/json'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `plan-${Date.now()}.json`;
+            a.download = `me-plan.json`;
             a.click();
         }
 
