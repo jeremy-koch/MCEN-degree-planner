@@ -1,149 +1,164 @@
 import os
 import json
-import csv
-from collections import defaultdict
-from datetime import datetime
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import numpy as np
+from collections import defaultdict
+from datetime import datetime
+import re
 
 # --- Configuration ---
 INPUT_DIR = "raw_jsons"
 OUTPUT_DIR = "output"
-HISTORICAL_CSV = "historical.csv"  # Place this next to the script
+HISTORICAL_CSV = "historical.csv"
 CSV_FILE = os.path.join(OUTPUT_DIR, "combined_enrollment.csv")
 PLOT_FILE = os.path.join(OUTPUT_DIR, "enrollment_heatmap.png")
 
 def get_actual_term(base_year, year_idx, term_name):
-    """Translates relative blocks into actual academic terms."""
     y = base_year + year_idx
-    if term_name in ["Spring", "Summer"]:
+    if term_name in ["Spring", "Summer"]: 
         y += 1
     return f"{term_name} {y}"
 
 def term_sort_key(term_str):
-    """Helper to sort terms chronologically (e.g., 'Spring 2024' -> (2024, 0))"""
     try:
-        term, year = term_str.split(" ")
+        parts = term_str.split(" ")
+        term, year = parts[0], parts[1]
         order = {"Spring": 0, "Summer": 1, "Fall": 2}
         return (int(year), order.get(term, 3))
-    except ValueError:
-        return (9999, 99) # Fallback for unexpected column names
+    except: 
+        return (9999, 99)
+
+def clean_key(course_code):
+    return re.sub(r'\s+', '', str(course_code)).upper()
+
+def format_display_name(key):
+    match = re.match(r"([A-Z]+)([0-9]+)", key)
+    if match:
+        return f"{match.group(1)} {match.group(2)}"
+    return key
+
+def course_sort_priority(course_key):
+    """Sorts MCEN courses to the top, then everything else alphabetically."""
+    is_mcen = course_key.startswith("MCEN")
+    # Priority 0 for MCEN, 1 for others. Then sorted alphabetically.
+    return (0 if is_mcen else 1, course_key)
 
 def process_enrollment():
-    latest_files = {}
-    
     os.makedirs(INPUT_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
-    # 1. Process JSON Predictions
+
+    # 1. LOAD PREDICTIONS
+    latest_files = {}
     files_found = [f for f in os.listdir(INPUT_DIR) if f.endswith(".json")]
-    tally = defaultdict(lambda: defaultdict(int))
+    pred_data = defaultdict(lambda: defaultdict(int))
+    pred_cols = set()
     
-    if files_found:
-        for filename in files_found:
-            filepath = os.path.join(INPUT_DIR, filename)
-            try:
-                with open(filepath, 'r') as f:
-                    data = json.load(f)
-                    
-                student_hash = data.get("student_hash", f"anonymous_{filename}")
-                timestamp_str = data.get("timestamp", "2000-01-01T00:00:00")
-                file_time = datetime.fromisoformat(timestamp_str)
-                
-                if student_hash not in latest_files or file_time > latest_files[student_hash]['time']:
-                    latest_files[student_hash] = {'path': filepath, 'time': file_time}
-            except Exception as e:
-                print(f"Error reading {filename}: {e}")
+    for filename in files_found:
+        filepath = os.path.join(INPUT_DIR, filename)
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            sid = data.get("student_hash", filename)
+            ts = datetime.fromisoformat(data.get("timestamp", "2000-01-01T00:00:00"))
+            if sid not in latest_files or ts > latest_files[sid]['ts']:
+                latest_files[sid] = {'data': data, 'ts': ts}
+        except: continue
 
-        for student_hash, file_info in latest_files.items():
-            try:
-                with open(file_info['path'], 'r') as f:
-                    data = json.load(f)
-                    
-                planner, year_list, base_year = data.get("planner", {}), data.get("year_list", []), data.get("base_year", 2024)
-                
-                for year_idx, year_name in enumerate(year_list):
-                    clean_year = year_name.replace(" ", "")
-                    for term_name in ["Fall", "Spring", "Summer"]:
-                        sid = f"{clean_year}-{term_name}"
-                        if sid in planner:
-                            actual_term = get_actual_term(base_year, year_idx, term_name)
-                            for course in planner[sid]:
-                                tally[actual_term][course["code"]] += 1
-            except Exception as e:
-                print(f"Error processing {file_info['path']}: {e}")
-        print(f"Processed {len(latest_files)} predicted student plans.")
+    for sid, info in latest_files.items():
+        d = info['data']
+        planner, year_list, base_year = d.get("planner", {}), d.get("year_list", []), d.get("base_year", 2024)
+        for y_idx, y_name in enumerate(year_list):
+            for t_name in ["Fall", "Spring", "Summer"]:
+                key = f"{y_name.replace(' ', '')}-{t_name}"
+                if key in planner:
+                    actual_term = get_actual_term(base_year, y_idx, t_name)
+                    pred_cols.add(actual_term)
+                    for course in planner[key]:
+                        c_code = clean_key(course["code"])
+                        pred_data[c_code][actual_term] += 1
 
-    # Convert predicted dict to DataFrame
-    df_pred = pd.DataFrame.from_dict(tally, orient='columns').fillna(0)
-    df_pred.index.name = "Course"
-    
-    # 2. Process Historical Data
-    df_hist = pd.DataFrame()
+    # 2. LOAD HISTORICAL
+    hist_data = defaultdict(lambda: defaultdict(int))
+    hist_cols = set()
     if os.path.exists(HISTORICAL_CSV):
         try:
-            df_hist = pd.read_csv(HISTORICAL_CSV)
-            df_hist.set_index("Course", inplace=True)
-            print(f"Loaded historical data from {HISTORICAL_CSV}")
+            df_h_raw = pd.read_csv(HISTORICAL_CSV)
+            course_col = df_h_raw.columns[0]
+            hist_cols = set(df_h_raw.columns[1:])
+            for _, row in df_h_raw.iterrows():
+                c_code = clean_key(row[course_col])
+                for term in hist_cols:
+                    val = row[term]
+                    try:
+                        hist_data[c_code][term] += int(float(val)) if pd.notnull(val) else 0
+                    except: continue
         except Exception as e:
-            print(f"Error reading historical CSV: {e}")
+            print(f"Historical CSV Error: {e}")
 
-    # 3. Merge and Sort
-    # Combine historical and predicted. If a column exists in both, predicted takes precedence (or you can adjust logic here)
-    if not df_hist.empty and not df_pred.empty:
-        # Combine columns, preferring predictions if they overlap
-        df_combined = df_pred.combine_first(df_hist).fillna(0)
-        num_hist_cols = len([c for c in df_hist.columns if c not in df_pred.columns])
-    elif not df_hist.empty:
-        df_combined = df_hist.fillna(0)
-        num_hist_cols = len(df_hist.columns)
-    elif not df_pred.empty:
-        df_combined = df_pred.fillna(0)
-        num_hist_cols = 0
-    else:
-        print("No data available to process.")
-        return
+    # 3. CONSOLIDATE MASTER LISTS WITH CUSTOM SORT
+    # Here is the magic: Sorting based on the priority function
+    unique_clean_keys = sorted(list(set(list(pred_data.keys()) + list(hist_data.keys()))), key=course_sort_priority)
+    all_terms = sorted(list(set(list(pred_cols) + list(hist_cols))), key=term_sort_key)
 
-    # Sort columns chronologically
-    sorted_cols = sorted(df_combined.columns, key=term_sort_key)
-    df_combined = df_combined[sorted_cols]
+    # 4. BUILD DATASETS
+    display_names = [format_display_name(k) for k in unique_clean_keys]
+    annot_rows = []
+    color_rows = []
+
+    for c_key in unique_clean_keys:
+        a_row = []
+        c_row = []
+        for term in all_terms:
+            p = pred_data[c_key][term]
+            h = hist_data[c_key][term]
+            in_pred = term in pred_cols
+            in_hist = term in hist_cols
+
+            if in_pred and in_hist:
+                a_row.append(f"{p} ({h})")
+                c_row.append(max(p, h))
+            elif in_pred:
+                a_row.append(f"{p}")
+                c_row.append(p)
+            elif in_hist:
+                a_row.append(f"({h})")
+                c_row.append(h)
+            else:
+                a_row.append("")
+                c_row.append(0)
+                
+        annot_rows.append(a_row)
+        color_rows.append(c_row)
+
+    df_final_annot = pd.DataFrame(annot_rows, index=display_names, columns=all_terms)
+    df_final_color = pd.DataFrame(color_rows, index=display_names, columns=all_terms)
+
+    # 5. EXPORT AND PLOT
+    df_final_annot.to_csv(CSV_FILE)
     
-    # Sort index (Course codes) alphabetically
-    df_combined.sort_index(inplace=True)
-
-    # 4. Write combined data to CSV
-    df_combined.to_csv(CSV_FILE)
-    print(f"Combined enrollment CSV saved to: {CSV_FILE}")
-
-    # 5. Generate Heatmap
-    plt.figure(figsize=(max(12, len(sorted_cols) * 0.8), max(8, len(df_combined) * 0.4)))
+    plt.figure(figsize=(max(14, len(all_terms)*1.2), max(8, len(display_names)*0.5)))
+    ax = sns.heatmap(df_final_color, annot=df_final_annot.values, fmt="", cmap="YlOrRd", 
+                     linewidths=.5, cbar_kws={'label': 'Student Count'})
     
-    # Draw the heatmap
-    ax = sns.heatmap(df_combined, annot=True, cmap="YlOrRd", fmt="g", linewidths=.5, cbar_kws={'label': 'Student Count'})
-    
-    # Add a visual divider if we have both historical and predicted data
-    if not df_hist.empty and not df_pred.empty:
-        # Find where historical ends and predictions begin
-        hist_cols_in_order = [c for c in sorted_cols if c in df_hist.columns and c not in df_pred.columns]
-        if hist_cols_in_order:
-            divider_idx = sorted_cols.index(hist_cols_in_order[-1]) + 1
+    if hist_cols and pred_cols:
+        last_hist_only = ""
+        for t in all_terms:
+            if t in hist_cols and t not in (pred_cols - hist_cols):
+                last_hist_only = t
+        if last_hist_only:
+            divider_idx = all_terms.index(last_hist_only) + 1
             ax.axvline(x=divider_idx, color='blue', linewidth=3, linestyle='--')
-            # Add text annotation
-            plt.text(divider_idx, -0.5, 'PREDICTED ->', color='blue', va='bottom', ha='left', fontweight='bold')
-            plt.text(divider_idx, -0.5, '<- ACTUAL', color='blue', va='bottom', ha='right', fontweight='bold')
+            plt.text(divider_idx, -0.2, 'PREDICTED ->', color='blue', va='bottom', ha='left', fontweight='bold')
+            plt.text(divider_idx, -0.2, '<- ACTUAL', color='blue', va='bottom', ha='right', fontweight='bold')
 
-    plt.title("Actual vs. Predicted Course Enrollment", fontsize=18, pad=30)
-    plt.xlabel("Semester", fontsize=14)
-    plt.ylabel("Course", fontsize=14)
-    
+    plt.title("Actual vs. Predicted Enrollment: MCEN Prioritized\nFormat: Predicted (Actual)", fontsize=18, pad=25)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    
     plt.savefig(PLOT_FILE, dpi=300)
     plt.close()
-    print(f"Enrollment Heatmap saved to: {PLOT_FILE}")
+    
+    print(f"Success! {len(display_names)} courses processed. MCEN core courses are at the top.")
 
 if __name__ == "__main__":
     process_enrollment()

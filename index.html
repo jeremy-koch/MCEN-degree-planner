@@ -3,310 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCEN Planner</title>
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>ME Course Planner | CU Boulder</title>
     <style>
-        :root { --cu-gold: #CFB87C; }
-        .btn-cu { background-color: var(--cu-gold); color: black; font-weight: 800; }
-        .btn-cu:hover { background-color: #bfa86b; }
-        .progress-fill { background-color: var(--cu-gold); transition: width 0.5s ease; }
-        .summer-row { display: none; }
-        .summer-row.show { display: block; }
-        .course-chip { position: relative; cursor: help; }
-        .course-chip:hover::after {
-            content: attr(data-title); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
-            background: #111; color: white; padding: 6px 10px; border-radius: 4px; white-space: nowrap; font-size: 10px; z-index: 50;
+        :root {
+            --cu-gold: #CFB87C;
+            --cu-black: #000000;
+            --light-gray: #f4f4f4;
+            --border-color: #ddd;
+            --error-red: #f8d7da;
+            --error-border: #dc3545;
+            --error-text: #721c24;
         }
-        .notes-area { display: none; }
-        .notes-area.show { display: block; }
-        @media print { .no-print { display: none !important; } }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0; display: flex; height: 100vh;
+            background-color: var(--light-gray);
+        }
+        /* --- Sidebar --- */
+        #sidebar {
+            width: 320px; background: white; border-right: 2px solid var(--border-color);
+            display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        .sidebar-header { background-color: var(--cu-black); color: var(--cu-gold); padding: 20px; text-align: center; }
+        .catalog-container { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        .course-pill {
+            background-color: var(--light-gray); border: 1px solid var(--border-color);
+            padding: 10px; margin-bottom: 8px; border-radius: 4px; cursor: grab;
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 500; transition: 0.2s;
+        }
+        .course-pill:hover { background-color: #e2e2e2; }
+        .credits-badge { background: var(--cu-gold); color: var(--cu-black); padding: 2px 6px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+
+        /* --- Main Content --- */
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .controls {
+            background: white; padding: 15px 30px; display: flex; flex-wrap: wrap;
+            gap: 15px; align-items: center; border-bottom: 2px solid var(--border-color);
+        }
+        .controls input, .controls select { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .template-group { display: flex; gap: 5px; align-items: center; border-left: 2px solid var(--border-color); padding-left: 15px; }
+        .btn-group { margin-left: auto; display: flex; gap: 10px; }
+        
+        button.action-btn { background-color: #eee; border: 1px solid #ccc; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button.export-btn { background-color: var(--cu-gold); border: none; }
+
+        /* --- Grid --- */
+        .planner-grid { padding: 20px; }
+        .year-row { background: white; margin-bottom: 20px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .year-title { margin-top: 0; border-bottom: 2px solid var(--cu-gold); padding-bottom: 5px; }
+        .semesters { display: flex; gap: 15px; margin-top: 15px; }
+        .semester-box { flex: 1; background: var(--light-gray); border: 2px dashed var(--border-color); border-radius: 6px; min-height: 120px; padding: 10px; position: relative; }
+        .semester-box.drag-over { background-color: #e8f4f8; border-color: #8bbdd9; }
+        .semester-title { font-size: 0.8em; text-transform: uppercase; color: #777; font-weight: bold; text-align: center; margin-bottom: 10px; }
+
+        /* --- Course Styling --- */
+        .dropped-course {
+            background: white; border: 1px solid #ccc; padding: 10px; margin-bottom: 8px;
+            border-radius: 4px; display: flex; flex-direction: column;
+            font-size: 0.85em; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .course-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .dropped-course.prereq-error {
+            background-color: var(--error-red) !important;
+            border: 2px solid var(--error-border) !important;
+        }
+        .error-label {
+            display: none; color: var(--error-text); font-size: 0.75em; font-weight: bold;
+            margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        .prereq-error .error-label { display: block; }
+        .remove-btn { color: red; cursor: pointer; font-weight: bold; border: none; background: none; font-size: 1.1em; }
+
+        /* --- Notes --- */
+        .note-container { display: none; margin-top: 10px; }
+        .note-container.active { display: block; }
+        .note-container textarea { width: 100%; height: 50px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
     </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-8 text-gray-900">
-    <div class="max-w-3xl mx-auto">
-        
-        <header class="bg-black text-white p-6 rounded-t-2xl border-b-4 border-[#CFB87C]">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-2xl font-black italic">MCEN <span class="text-[#CFB87C]">PLANNER</span></h1>
-                    <div class="mt-4 flex gap-4 no-print">
-                        <div>
-                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Student ID (Hashed on Export)</label>
-                            <input id="student-id" type="password" placeholder="Ex: 109..." class="bg-gray-800 text-white text-xs p-1.5 rounded border border-gray-600 outline-none w-36">
-                        </div>
+<body>
+
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>ME Catalog</h2>
+        </div>
+        <div class="catalog-container" id="catalog"></div>
+    </div>
+
+    <div id="main-content">
+        <div class="controls">
+            <input type="text" id="studentName" placeholder="Student ID">
+            <input type="number" id="baseYear" value="2024" style="width: 80px;">
+            
+            <div class="template-group">
+                <select id="planTemplate">
+                    <option value="">-- Select Template --</option>
+                    <option value="blue_plan">The Blue Plan</option>
+                    <option value="green_plan">The Green Plan</option>
+                </select>
+                <button class="action-btn" onclick="applyTemplate()">Apply</button>
+            </div>
+
+            <div class="btn-group">
+                <button class="action-btn" onclick="duplicatePlan()">Duplicate Tab</button>
+                <button class="action-btn export-btn" onclick="exportJSON()">Export JSON</button>
+            </div>
+        </div>
+
+        <div class="planner-grid" id="planner">
+            <div class="year-row" style="background: #f0f7ff;">
+                <h3 class="year-title">Prior / Transfer Credits</h3>
+                <div class="semesters">
+                    <div class="semester-box" data-sid="transfer" ondrop="handleDrop(event)" ondragover="handleDragOver(event)">
+                        <div class="semester-title">Transfer Credits</div>
                     </div>
                 </div>
-                <div class="text-right">
-                    <div id="grand-total" class="text-3xl font-mono font-bold text-[#CFB87C]">0</div>
-                    <div class="text-[9px] uppercase font-bold text-gray-400">Total Credits</div>
-                </div>
             </div>
-            <div class="mt-6">
-                <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
-                    <span>Degree Progress</span>
-                    <span id="prog-txt">0%</span>
-                </div>
-                <div class="w-full bg-gray-800 h-2 rounded-full"><div id="prog-bar" class="progress-fill h-full rounded-full" style="width: 0%"></div></div>
             </div>
-        </header>
-
-        <div class="bg-white border-x border-b p-3 flex flex-wrap gap-2 no-print justify-between">
-            <div class="flex gap-2">
-                <button onclick="window.print()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border hover:bg-gray-100">PRINT PDF</button>
-                <button id="tog-trans" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase hover:bg-gray-100">+ Transfer</button>
-                <button onclick="jsExport()" class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase hover:bg-gray-100">⬇ Export JSON</button>
-                <label class="text-[10px] font-bold px-3 py-1 bg-gray-50 rounded border uppercase cursor-pointer hover:bg-gray-100">
-                    ⬆ Import JSON <input type="file" id="file-upload" class="hidden" onchange="jsImport(event)">
-                </label>
-            </div>
-            <button onclick="clearStorage()" class="text-[10px] font-bold px-3 py-1 text-red-600 bg-red-50 rounded hover:bg-red-100 border border-red-200">RESET ALL</button>
-        </div>
-
-        <div id="sec-trans" class="hidden bg-amber-50 p-4 border-x border-b border-dashed border-gray-300">
-            <div class="flex gap-2">
-                <input id="in-transfer" class="border p-2 text-xs rounded flex-1 font-mono enter-listener" data-sid="transfer" placeholder="Ex: APPM 1350">
-                <button onclick="pyAdd('transfer')" class="btn-cu px-4 py-2 rounded text-xs">ADD</button>
-            </div>
-            <ul id="list-transfer" class="mt-3 space-y-1"></ul>
-        </div>
-
-        <div class="bg-white p-4 border-x border-b shadow-sm mb-6">
-            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Remaining Requirements:</h3>
-            <div id="req-bank" class="flex flex-wrap gap-1"></div>
-        </div>
-
-        <div id="main-container" class="space-y-8"></div>
-
-        <div class="mt-8 flex justify-center pb-20 no-print">
-            <button id="btn-year" class="btn-cu px-8 py-3 rounded-xl shadow-lg">+ ADD ANOTHER YEAR</button>
-        </div>
     </div>
 
     <script>
-        function pyAdd(sid) { window.py_add_course?.(sid, document.getElementById('in-' + sid).value); }
-        function pyRem(sid, idx) { window.py_rem_course?.(sid, idx); }
-        
-        async function jsExport() {
-            const jsonString = await window.py_get_export_data?.();
-            const blob = new Blob([jsonString], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url; link.download = "mcen_plan.json"; link.click();
+        const CATALOG = { 
+            "APPM 1350": 4, "MCEN 1030": 4, "PHYS 1110": 4, "GEEN 1400": 3, "COEN 1500": 1, 
+            "APPM 1360": 4, "MCEN 1024": 3, "MCEN 1025": 4, "PHYS 1120": 4, "PHYS 1140": 1, 
+            "APPM 2350": 4, "MCEN 2000": 1, "MCEN 2023": 3, "MCEN 2024": 3, "APPM 2360": 4, 
+            "MCEN 2043": 3, "MCEN 2063": 3, "MCEN 3012": 3, "MCEN 3021": 3, "MCEN 3025": 3, 
+            "MCEN 3030": 3, "MCEN 3022": 3, "MCEN 4026": 3, "MCEN 4043": 3, "MCEN 3032": 3, 
+            "MCEN 3047": 4, "MCEN 4045": 3, "MCEN 4085": 3, "ECEN 3010": 3,
+            "H&SS Lower Div": 3, "H&SS Upper Div": 3, "Free Elective": 3, "Writing": 3, 
+            "Gen Tech Elective": 3, "ME Tech Elective": 3
+        };
+
+        const PREREQS = {
+            "APPM 1360": ["APPM 1350"],
+            "PHYS 1120": ["PHYS 1110"],
+            "APPM 2350": ["APPM 1360"],
+            "APPM 2360": ["APPM 1360"],
+            "MCEN 2023": ["APPM 1360", "PHYS 1110"],
+            "MCEN 2063": ["MCEN 2023"],
+            "MCEN 2043": ["MCEN 2023"],
+            "MCEN 3012": ["MCEN 2023"],
+            "MCEN 3021": ["MCEN 2023", "APPM 2350"],
+            "MCEN 3022": ["MCEN 3021"],
+            "MCEN 3030": ["MCEN 2023"],
+            "MCEN 4043": ["MCEN 3030"],
+            "MCEN 3032": ["MCEN 2024", "MCEN 2063"],
+            "MCEN 3047": ["MCEN 2024", "MCEN 2063"],
+            "MCEN 4045": ["MCEN 3022", "MCEN 3030"],
+            "MCEN 4085": ["MCEN 4045"],
+            "ECEN 3010": ["PHYS 1120", "APPM 2360"]
+        };
+
+        const COREQS = {
+            "PHYS 1140": ["PHYS 1120"],
+            "MCEN 1025": ["APPM 1350"]
+        };
+
+        const YEAR_LIST = ["First Year", "Sophomore Year", "Junior Year", "Senior Year"];
+        const TERMS = ["Fall", "Spring"];
+        const SEM_ORDER = ["transfer"]; 
+        YEAR_LIST.forEach(y => TERMS.forEach(t => SEM_ORDER.push(y.replace(/\s/g, '') + "-" + t)));
+
+        const TEMPLATES = {
+            "blue_plan": {
+                "FirstYear-Fall": ["GEEN 1400", "MCEN 1030", "APPM 1350", "PHYS 1110"],
+                "FirstYear-Spring": ["MCEN 1025", "MCEN 1024", "APPM 1360", "PHYS 1120", "PHYS 1140"],
+                "SophomoreYear-Fall": ["H&SS Lower Div", "MCEN 2000", "MCEN 2024", "APPM 2350", "MCEN 2023"],
+                "SophomoreYear-Spring": ["H&SS Lower Div", "Free Elective", "MCEN 3012", "APPM 2360", "MCEN 2063", "MCEN 2043"],
+                "JuniorYear-Fall": ["H&SS Lower Div", "MCEN 3025", "MCEN 3030", "ECEN 3010", "MCEN 3021"],
+                "JuniorYear-Spring": ["Writing", "MCEN 4026", "Gen Tech Elective", "MCEN 3022", "MCEN 4043"],
+                "SeniorYear-Fall": ["H&SS Upper Div", "MCEN 4045", "MCEN 3032", "ME Tech Elective", "MCEN 3047"],
+                "SeniorYear-Spring": ["H&SS Upper Div", "MCEN 4085", "Free Elective", "ME Tech Elective", "Gen Tech Elective"]
+            },
+            "green_plan": {
+                "FirstYear-Fall": ["H&SS Lower Div", "GEEN 1400", "MCEN 1024", "APPM 1350"],
+                "FirstYear-Spring": ["H&SS Lower Div", "H&SS Lower Div", "PHYS 1110", "APPM 1360", "MCEN 1030"],
+                "SophomoreYear-Fall": ["Free Elective", "PHYS 1140", "PHYS 1120", "APPM 2350", "MCEN 1025", "MCEN 2000"],
+                "SophomoreYear-Spring": ["H&SS Upper Div", "Free Elective", "MCEN 2023", "APPM 2360", "ECEN 3010", "MCEN 2024"],
+                "JuniorYear-Fall": ["Writing", "MCEN 2063", "MCEN 2043", "MCEN 3012", "MCEN 4026"],
+                "JuniorYear-Spring": ["H&SS Upper Div", "MCEN 3021", "MCEN 3030", "MCEN 3025", "MCEN 3047"],
+                "SeniorYear-Fall": ["MCEN 4045", "MCEN 3022", "MCEN 4043", "ME Tech Elective"],
+                "SeniorYear-Spring": ["MCEN 3032", "MCEN 4085", "Gen Tech Elective", "Gen Tech Elective", "ME Tech Elective"]
+            }
+        };
+
+        function init() { renderCatalog(); renderPlanner(); }
+
+        function renderCatalog() {
+            const cat = document.getElementById('catalog');
+            Object.keys(CATALOG).sort().forEach(code => {
+                const div = document.createElement('div');
+                div.className = 'course-pill';
+                div.draggable = true;
+                div.dataset.code = code;
+                div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({code, source: 'catalog'}));
+                div.innerHTML = `<span>${code}</span> <span class="credits-badge">${CATALOG[code]} cr</span>`;
+                cat.appendChild(div);
+            });
         }
 
-        async function jsImport(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            window.py_load_file?.(await file.text());
+        function renderPlanner() {
+            const p = document.getElementById('planner');
+            YEAR_LIST.forEach(y => {
+                const cleanY = y.replace(/\s+/g, '');
+                const row = document.createElement('div');
+                row.className = 'year-row';
+                let sems = '';
+                TERMS.forEach(t => {
+                    const sid = `${cleanY}-${t}`;
+                    sems += `<div class="semester-box" data-sid="${sid}" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"><div class="semester-title">${t}</div></div>`;
+                });
+                row.innerHTML = `<h3 class="year-title">${y}</h3><div class="semesters">${sems}</div><button class="action-btn" onclick="toggleNote('${cleanY}')" style="margin-top:10px; font-size: 0.7em;">+ Notes</button><div class="note-container" id="nc-${cleanY}"><textarea placeholder="Yearly notes..."></textarea></div>`;
+                p.appendChild(row);
+            });
         }
 
-        function toggleSummer(n) {
-            const rows = document.querySelectorAll(`[id^='row-${n}']`);
-            let isShowing = false;
-            rows.forEach(r => {
-                if (r.classList.contains('summer-row')) {
-                    r.classList.toggle('show');
-                    isShowing = r.classList.contains('show');
+        function validateAllPrereqs() {
+            const courseMap = {};
+            document.querySelectorAll('.semester-box').forEach(box => {
+                courseMap[box.dataset.sid] = Array.from(box.querySelectorAll('.dropped-course')).map(c => c.dataset.code);
+            });
+
+            document.querySelectorAll('.dropped-course').forEach(pill => {
+                const code = pill.dataset.code;
+                const sid = pill.closest('.semester-box').dataset.sid;
+                const errorLabel = pill.querySelector('.error-label');
+                
+                const pre = PREREQS[code] || [];
+                const co = COREQS[code] || [];
+                const myIndex = SEM_ORDER.indexOf(sid);
+
+                let missingPre = pre.filter(req => {
+                    for (let i = 0; i < myIndex; i++) if (courseMap[SEM_ORDER[i]]?.includes(req)) return false;
+                    return true;
+                });
+
+                let missingCo = co.filter(req => {
+                    for (let i = 0; i <= myIndex; i++) if (courseMap[SEM_ORDER[i]]?.includes(req)) return false;
+                    return true;
+                });
+
+                if (missingPre.length > 0 || missingCo.length > 0) {
+                    pill.classList.add('prereq-error');
+                    let msg = "";
+                    if (missingPre.length > 0) msg += `Need Pre-req: ${missingPre.join(', ')}. `;
+                    if (missingCo.length > 0) msg += `Need Co-req: ${missingCo.join(', ')}.`;
+                    errorLabel.innerText = "⚠ " + msg;
+                } else {
+                    pill.classList.remove('prereq-error');
+                    errorLabel.innerText = "";
                 }
             });
-            const btn = document.getElementById(`btn-sum-${n}`);
-            if(btn) btn.innerText = isShowing ? '- HIDE SUMMER' : '+ ADD SUMMER';
         }
 
-        function toggleNotes(n, b) {
-            const el = document.getElementById('notes-' + n);
-            el.classList.toggle('show');
-            b.innerText = el.classList.contains('show') ? '- HIDE NOTES' : '+ ADD NOTES/GOALS';
+        function handleDrop(ev) {
+            ev.preventDefault();
+            const box = ev.currentTarget.closest('.semester-box');
+            box.classList.remove('drag-over');
+            const data = JSON.parse(ev.dataTransfer.getData("application/json"));
+            
+            if (data.source === 'catalog') {
+                createCourseDOM(data.code, box);
+            } else {
+                box.appendChild(document.getElementById(data.elId));
+            }
+            validateAllPrereqs();
         }
 
-        function clearStorage() { if(confirm("Wipe all data?")) { localStorage.removeItem('mcen_planner_data'); location.reload(); } }
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && e.target.classList.contains('enter-listener')) pyAdd(e.target.getAttribute('data-sid'));
-        });
-    </script>
-
-    <script type="py">
-        from pyscript import document, window
-        from pyodide.ffi import create_proxy
-        import json
-        import hashlib
-        import datetime
-
-        CATALOG = { 
-            "APPM 1350": {"t": "Calculus 1", "c": 4}, "MCEN 1030": {"t": "Engineering Comp", "c": 4}, 
-            "PHYS 1110": {"t": "Physics 1", "c": 4}, "GEEN 1400": {"t": "Engr Projects", "c": 3}, 
-            "COEN 1500": {"t": "Seminar", "c": 1}, "APPM 1360": {"t": "Calculus 2", "c": 4}, 
-            "MCEN 1024": {"t": "Chemistry", "c": 3}, "MCEN 1025": {"t": "CAD/Fab", "c": 4}, 
-            "PHYS 1120": {"t": "Physics 2", "c": 4}, "PHYS 1140": {"t": "Exp Physics 1", "c": 1}, 
-            "APPM 2350": {"t": "Calculus 3", "c": 4}, "MCEN 2000": {"t": "ME Profession", "c": 1}, 
-            "MCEN 2023": {"t": "Statics", "c": 3}, "MCEN 2024": {"t": "Materials Sci", "c": 3}, 
-            "APPM 2360": {"t": "Diff Eq", "c": 4}, "MCEN 2043": {"t": "Dynamics", "c": 3}, 
-            "MCEN 2063": {"t": "Solids", "c": 3}, "MCEN 3012": {"t": "Thermodynamics", "c": 3}, 
-            "MCEN 3017": {"t": "Circuits", "c": 3}, "MCEN 3021": {"t": "Fluid Mechanics", "c": 3}, 
-            "MCEN 3025": {"t": "Component Design", "c": 3}, "MCEN 3030": {"t": "Computational Methods", "c": 3}, 
-            "MCEN 3022": {"t": "Heat Transfer", "c": 3}, "MCEN 4026": {"t": "Manufacturing Processes", "c": 3}, 
-            "MCEN 4043": {"t": "System Dynamics", "c": 3}, "MCEN 3032": {"t": "Thermodynamics 2", "c": 3}, 
-            "MCEN 3047": {"t": "Data Analysis & Exp Methods", "c": 4}, "MCEN 4045": {"t": "ME Design Project 1", "c": 3}, 
-            "MCEN 4085": {"t": "ME Senior Design 2", "c": 3}
+        function createCourseDOM(code, box) {
+            const div = document.createElement('div');
+            div.className = 'dropped-course';
+            div.id = 'c-' + Math.random().toString(36).substr(2, 9);
+            div.draggable = true;
+            div.dataset.code = code;
+            div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({elId: div.id, source: 'sem'}));
+            
+            div.innerHTML = `
+                <div class="course-header">
+                    <strong>${code}</strong>
+                    <button class="remove-btn" onclick="this.closest('.dropped-course').remove(); validateAllPrereqs();">&times;</button>
+                </div>
+                <div class="error-label"></div>
+            `;
+            box.appendChild(div);
         }
-        
-        planner, sems, notes, year_list = {"transfer": []}, ["transfer"], {}, ["First Year", "Sophomore Year", "Junior Year", "Senior Year"]
-        base_year = 2024
 
-        def get_semester_label(year_idx, term_name):
-            y = base_year + year_idx
-            if term_name in ["Spring", "Summer"]: y += 1
-            return f"{term_name} {y}"
+        function applyTemplate() {
+            const key = document.getElementById('planTemplate').value;
+            if (!key) return;
+            document.querySelectorAll('.dropped-course').forEach(c => c.remove());
+            const plan = TEMPLATES[key];
+            for (const [sid, courses] of Object.entries(plan)) {
+                const box = document.querySelector(`[data-sid="${sid}"]`);
+                if (box) courses.forEach(c => createCourseDOM(c, box));
+            }
+            validateAllPrereqs();
+        }
 
-        def refresh():
-            planned_norm = [c['code'].replace(" ","").upper() for s in sems for c in planner[s]]
-            
-            for i, y_name in enumerate(year_list):
-                clean = y_name.replace(" ", "")
-                has_summer_shown = False
-                
-                for t_name in ["Fall", "Spring", "Summer"]:
-                    sid = f"{clean}-{t_name}"
-                    actual_term = get_semester_label(i, t_name)
-                    lbl = document.getElementById(f"lbl-{sid}")
-                    
-                    if lbl:
-                        if sid == "FirstYear-Fall":
-                            lbl.innerText = "FALL"
-                            sel = document.getElementById("base-year-select")
-                            if sel and sel.options.length == 0:
-                                for y in range(2020, 2030):
-                                    opt = document.createElement("option")
-                                    opt.value, opt.innerText = str(y), str(y)
-                                    sel.appendChild(opt)
-                                sel.value = str(base_year)
-                        else:
-                            lbl.innerText = actual_term.upper()
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+        function toggleNote(id) { document.getElementById('nc-'+id).classList.toggle('active'); }
 
-                    row = document.getElementById(f"row-{sid}")
-                    if row:
-                        row.classList.remove("hidden") # Fallback to strip hidden if it lingers
-                        if t_name == "Summer":
-                            row.classList.add("summer-row")
-                            if planner[sid] or row.classList.contains("show"):
-                                row.classList.add("show")
-                                has_summer_shown = True
-                            else:
-                                row.classList.remove("show")
-                        else:
-                            row.classList.remove("summer-row")
-                            row.classList.remove("show")
-                
-                btn = document.getElementById(f"btn-sum-{clean}")
-                if btn: btn.innerText = "- HIDE SUMMER" if has_summer_shown else "+ ADD SUMMER"
+        function duplicatePlan() {
+            const data = { sid: document.getElementById('studentName').value, year: document.getElementById('baseYear').value };
+            window.open(window.location.href, '_blank');
+        }
 
-            bank = document.getElementById("req-bank")
-            bank.innerHTML = ""
-            core_count = 0
-            for code, data in CATALOG.items():
-                if code.replace(" ","").upper() not in planned_norm:
-                    span = document.createElement("span")
-                    span.className = "course-chip text-[9px] bg-gray-100 border px-1.5 py-0.5 rounded text-gray-400 font-mono"
-                    span.innerText = code
-                    span.setAttribute("data-title", f"{data['t']} ({data['c']} hrs)")
-                    bank.appendChild(span)
-                else: core_count += 1
-            
-            perc = int((core_count/len(CATALOG))*100)
-            document.getElementById("prog-bar").style.width, document.getElementById("prog-txt").innerText = f"{perc}%", f"{perc}%"
+        function exportJSON() {
+            const plan = {};
+            document.querySelectorAll('.semester-box').forEach(box => {
+                plan[box.dataset.sid] = Array.from(box.querySelectorAll('.dropped-course')).map(c => c.dataset.code);
+            });
+            const blob = new Blob([JSON.stringify(plan, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `plan-${Date.now()}.json`;
+            a.click();
+        }
 
-            grand_total = 0
-            for sid in sems:
-                el = document.getElementById(f"list-{sid}")
-                if not el: continue
-                el.innerHTML = ""
-                sub = 0
-                for i, c in enumerate(planner[sid]):
-                    sub += c['credits']
-                    li = document.createElement("li")
-                    li.className = "flex justify-between items-center bg-white p-2 rounded border text-xs font-mono shadow-sm"
-                    li.innerHTML = f"<span><b>{c['code']}</b></span><button onclick='pyRem(\"{sid}\", {i})' class='text-red-500 font-bold'>[X]</button>"
-                    el.appendChild(li)
-                if document.getElementById(f"sub-{sid}"): document.getElementById(f"sub-{sid}").innerText = str(sub)
-                grand_total += sub
-            document.getElementById("grand-total").innerText = str(grand_total)
-            window.localStorage.setItem('mcen_planner_data', json.dumps({"planner": planner, "sems": sems, "notes": notes, "year_list": year_list, "base_year": base_year}))
-
-        def build_year(name):
-            cont = document.getElementById("main-container")
-            y_div = document.createElement("div")
-            clean = name.replace(" ", "")
-            note_content = notes.get(name, "")
-            html = f"<div class='mb-2 flex justify-between items-end border-b-4 border-black pb-1'><h3 class='text-xl font-black italic uppercase tracking-tighter'>{name}</h3><div class='flex gap-4 no-print'><button onclick='toggleNotes(\"{clean}\", this)' class='text-[10px] font-bold text-gray-400'>+ NOTES</button><button id='btn-sum-{clean}' onclick='toggleSummer(\"{clean}\")' class='text-[10px] font-bold text-amber-600'>+ ADD SUMMER</button></div></div><div id='notes-{clean}' class='notes-area mb-4 {'show' if note_content else ''}'><textarea id='ta-{clean}' class='w-full p-2 text-xs border rounded bg-gray-50' rows='2' placeholder='Goals...'>{note_content}</textarea></div><div class='flex flex-col gap-4'>"
-            
-            for t in ["Fall", "Spring", "Summer"]:
-                sid = f"{clean}-{t}"
-                if sid not in sems: sems.append(sid)
-                if sid not in planner: planner[sid] = []
-                
-                # Only inject the dropdown if it is FirstYear-Fall
-                dropdown_html = "<select id='base-year-select' onchange='window.py_change_year()' class='ml-2 border border-gray-300 rounded text-xs bg-gray-50 px-1 py-0.5 outline-none cursor-pointer'></select>" if sid == "FirstYear-Fall" else ""
-                
-                html += f"""
-                <div id='row-{sid}' class='bg-white p-4 rounded border shadow-sm {'summer-row' if t == 'Summer' else ''}'>
-                    <div class='flex justify-between items-center mb-3'>
-                        <div class='flex items-center'>
-                            <span id='lbl-{sid}' class='font-black text-xs mr-2'></span>
-                            {dropdown_html}
-                        </div>
-                        <span class='text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded'>HRS: <span id='sub-{sid}'>0</span></span>
-                    </div>
-                    <div class='flex gap-1 mb-2 no-print'>
-                        <input id='in-{sid}' class='border p-2 text-[10px] rounded flex-1 font-mono enter-listener' data-sid='{sid}' placeholder='Code'>
-                        <button onclick='pyAdd("{sid}")' class='btn-cu px-3 py-1 rounded text-[10px]'>ADD</button>
-                    </div><ul id='list-{sid}' class='space-y-1'></ul>
-                </div>"""
-            y_div.innerHTML = html + "</div>"
-            cont.appendChild(y_div)
-            def update_n(e): (notes.update({name: e.target.value}), refresh())
-            document.getElementById(f"ta-{clean}").oninput = create_proxy(update_n)
-
-        def get_export_data():
-            raw_id = document.getElementById("student-id").value.strip()
-            salt = "MCEN_Secr3t_S@lt_2026!" 
-            hashed_id = hashlib.sha256(f"{salt}{raw_id}".encode()).hexdigest() if raw_id else "anonymous"
-            
-            return json.dumps({
-                "student_hash": hashed_id,
-                "timestamp": datetime.datetime.now().isoformat(),
-                "base_year": base_year,
-                "planner": planner,
-                "sems": sems,
-                "notes": notes,
-                "year_list": year_list
-            })
-
-        def load_file(text):
-            global planner, sems, notes, year_list, base_year
-            data = json.loads(text)
-            planner, sems, notes, year_list = data['planner'], data['sems'], data['notes'], data['year_list']
-            base_year = data.get('base_year', 2024)
-            document.getElementById("main-container").innerHTML = ""
-            for year in year_list: build_year(year)
-            refresh()
-
-        window.py_add_course = create_proxy(lambda sid, val: (val.strip().upper() in CATALOG and planner[sid].append({"code": val.strip().upper(), "credits": CATALOG[val.strip().upper()]['c']}), refresh()))
-        window.py_rem_course = create_proxy(lambda s, i: (planner[s].pop(int(i)), refresh()))
-        window.py_get_export_data = create_proxy(get_export_data)
-        window.py_load_file = create_proxy(load_file)
-        window.py_change_year = create_proxy(lambda: (globals().update(base_year=int(document.getElementById('base-year-select').value)), refresh()))
-
-        raw = window.localStorage.getItem('mcen_planner_data')
-        if raw:
-            d = json.loads(raw)
-            planner, sems, notes, year_list, base_year = d.get('planner', planner), d.get('sems', sems), d.get('notes', notes), d.get('year_list', year_list), d.get('base_year', base_year)
-        
-        for y in year_list: build_year(y)
-        document.getElementById("btn-year").onclick = create_proxy(lambda e: (year_list.append(f"Year {len(year_list)+1}"), build_year(year_list[-1]), refresh()))
-        document.getElementById("tog-trans").onclick = create_proxy(lambda e: document.getElementById("sec-trans").classList.toggle("hidden"))
-        refresh()
+        init();
     </script>
 </body>
 </html>
