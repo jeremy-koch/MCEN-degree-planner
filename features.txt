@@ -1,0 +1,8 @@
+In case the LLM decides to drop any, creating a list of features that we have tried to implement.
+
+- Prereqs/coreqs with warning
+- Duplicate Tab
+- Import/Export JSON
+- Print to pdf
+- Drag and drop
+- Counters at top for requirements

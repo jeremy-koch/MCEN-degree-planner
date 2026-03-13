@@ -3,42 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ME Planner | Full Templates</title>
+    <title>ME Planner | Complex Prerequisites</title>
     <style>
         :root {
             --cu-gold: #CFB87C;
             --cu-black: #000000;
             --light-gray: #f4f4f4;
             --border-color: #ddd;
-            --summer-blue: #f0faff;
             --error-red: #dc3545;
             --error-bg: #f8d7da;
         }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--light-gray); }
         
-        #sidebar { width: 320px; background: white; border-right: 2px solid var(--border-color); display: flex; flex-direction: column; }
-        .sidebar-header { background: var(--cu-black); color: var(--cu-gold); padding: 20px; text-align: center; }
+        #sidebar { width: 320px; background: white; border-right: 2px solid var(--border-color); display: flex; flex-direction: column; z-index: 5; }
+        .sidebar-header { background: var(--cu-black); color: var(--cu-gold); padding: 20px; text-align: center; margin-bottom: 0; }
+        .search-container { padding: 10px 15px; background: #eee; border-bottom: 1px solid var(--border-color); }
+        #catalogSearch { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .catalog-container { padding: 15px; overflow-y: auto; flex-grow: 1; }
         
+        /* Instant Tooltips */
+        .course-pill, .dropped-course { position: relative; cursor: grab; }
+        .course-pill:hover::after, .dropped-course:hover::after {
+            content: attr(data-info);
+            position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); color: white; padding: 6px 10px; border-radius: 4px;
+            font-size: 0.8em; white-space: normal; width: max-content; max-width: 220px;
+            z-index: 100; pointer-events: none; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         .course-pill {
             background: var(--light-gray); border: 1px solid var(--border-color);
-            padding: 8px 10px; margin-bottom: 8px; border-radius: 4px; cursor: grab;
+            padding: 8px 10px; margin-bottom: 8px; border-radius: 4px;
             display: flex; justify-content: space-between; align-items: center; font-size: 0.9em;
+            transition: 0.1s;
         }
+        .course-pill:hover { background: #e8e8e8; border-color: #bbb; }
         .credits-badge { background: var(--cu-gold); color: var(--cu-black); padding: 2px 6px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
 
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+        
         .controls { 
             background: white; padding: 15px 30px; display: flex; gap: 12px; align-items: center; 
-            border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10; 
+            border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; flex-wrap: wrap;
         }
-        
-        #studentID { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; width: 120px; }
-        #planTemplate { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; }
-
+        #studentID, #planTemplate { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; }
         button.action-btn { background: #eee; border: 1px solid #ccc; padding: 8px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button.action-btn:hover { background: #ddd; }
         button.add-year-btn { background: #28a745; color: white; border: none; }
+        button.export-btn { background: #0078d4; color: white; border: none; }
+        button.export-btn:hover { background: #005a9e; }
         button.clear-btn { background: #fff1f1; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Progress Tracker Dashboard */
+        .progress-dashboard {
+            background: white; padding: 15px 30px; border-bottom: 2px solid var(--border-color);
+            display: flex; flex-wrap: wrap; gap: 15px; position: sticky; top: 65px; z-index: 9;
+            box-shadow: 0 4px 6px -6px rgba(0,0,0,0.2);
+        }
+        .prog-badge {
+            background: #f8f9fa; border: 1px solid #ccc; padding: 5px 10px; border-radius: 6px;
+            font-size: 0.85em; font-weight: bold; display: flex; flex-direction: column; align-items: center; min-width: 80px;
+        }
+        .prog-badge span.count { font-size: 1.3em; color: var(--cu-black); margin-top: 3px; }
+        .prog-badge.complete { background: #d4edda; border-color: #c3e6cb; color: #155724; }
 
         .planner-grid { padding: 20px; }
         .year-row { background: white; margin-bottom: 25px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -49,17 +76,44 @@
         .semester-header { display: flex; justify-content: space-between; font-size: 0.75em; font-weight: bold; color: #777; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
         .sem-credits.overload { color: var(--error-red); font-weight: 900; }
 
-        .dropped-course { background: white; border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; border-radius: 4px; cursor: grab; font-size: 0.85em; }
+        .dropped-course { background: white; border: 1px solid #ccc; padding: 8px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 0.85em; }
+        
+        /* "No Credit" Styling */
+        .dropped-course.no-credit-pill { background: #e2e3e5; opacity: 0.75; border-style: dashed; }
+        .dropped-course.no-credit-pill .course-label { text-decoration: line-through; color: #666; }
+
         .dropped-course.prereq-error { background: var(--error-bg) !important; border-color: var(--error-red) !important; }
         .error-label { display: none; color: #721c24; font-size: 0.75em; font-weight: bold; margin-top: 5px; }
         .prereq-error .error-label { display: block; }
-        .remove-btn { color: red; cursor: pointer; border: none; background: none; }
+        
+        .btn-group { display: flex; gap: 5px; }
+        .icon-btn { cursor: pointer; border: none; background: none; font-size: 1.1em; padding: 0 2px; opacity: 0.6; }
+        .icon-btn:hover { opacity: 1; }
+        .remove-btn:hover { color: red; }
+
+        /* Modal Styles */
+        #editModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; border-bottom: 2px solid var(--cu-gold); padding-bottom: 10px; }
+        .modal-content label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.85em; }
+        .modal-content input, .modal-content select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+        @media print {
+            #sidebar, .controls, .progress-dashboard, .btn-group, .year-remove-btn { display: none !important; }
+            #main-content { display: block; }
+            .year-row { border: 1px solid #ccc; page-break-inside: avoid; margin-bottom: 15px; }
+        }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <div class="sidebar-header"><h2>ME Catalog</h2></div>
+        <div class="sidebar-header"><h2 style="margin:0;">ME Catalog</h2></div>
+        <div class="search-container"><input type="text" id="catalogSearch" placeholder="Search classes..." oninput="filterCatalog()"></div>
         <div class="catalog-container" id="catalog"></div>
     </div>
 
@@ -68,14 +122,20 @@
             <input type="text" id="studentID" placeholder="Student ID">
             <select id="planTemplate">
                 <option value="">-- Select Template --</option>
-                <option value="blue_plan">Blue Plan (Standard)</option>
-                <option value="green_plan">Green Plan (Alt)</option>
+                <option value="example_4-year_plan">Example 4-Year Plan</option>
+                <option value="example_5-year_plan">Example 5-Year Plan</option>
+                <option value="blue_plan">Blue Plan (Legacy)</option>
+                <option value="green_plan">Green Plan (Legacy)</option>
             </select>
             <button class="action-btn" onclick="applyTemplate()">Apply</button>
             <button class="action-btn add-year-btn" onclick="addYear()">+ Year</button>
-            <button class="action-btn" onclick="duplicatePlan()">Duplicate</button>
+            <button class="action-btn" onclick="duplicatePlan()">Duplicate Link</button>
+            <button class="action-btn export-btn" onclick="exportForPowerAutomate()">Export JSON</button>
             <button class="action-btn clear-btn" style="margin-left:auto" onclick="clearPlan()">Clear</button>
         </div>
+
+        <div class="progress-dashboard" id="progressBoard">
+            </div>
 
         <div class="planner-grid" id="planner">
             <div class="year-row" style="background: #f0f7ff;">
@@ -89,24 +149,88 @@
         </div>
     </div>
 
+    <div id="editModal">
+        <div class="modal-content">
+            <h3>Edit Course</h3>
+            <label>Course Title:</label>
+            <input type="text" id="modTitle">
+            
+            <label>Credit Hours:</label>
+            <input type="number" id="modCreds" step="0.5" min="0">
+            
+            <label>Fulfills Requirement:</label>
+            <select id="modCat">
+                <option value="none">Standard / Uncategorized</option>
+                <option value="H&SS Lower">H&SS Lower</option>
+                <option value="H&SS Upper">H&SS Upper</option>
+                <option value="Gen Tech">Gen Tech</option>
+                <option value="ME Tech">ME Tech</option>
+                <option value="Free Elective">Free Elective</option>
+                <option value="Writing">Writing</option>
+                <option value="MCEN Core">MCEN Core Class</option>
+                <option value="No Credit">No Credit (Failed / Dropped)</option>
+            </select>
+
+            <div class="modal-actions">
+                <button class="action-btn" onclick="closeModal()">Cancel</button>
+                <button class="action-btn add-year-btn" onclick="saveModal()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const CATALOG = { 
-            "APPM 1350": 4, "MCEN 1030": 4, "PHYS 1110": 4, "GEEN 1400": 3, "COEN 1500": 1, 
-            "APPM 1360": 4, "MCEN 1024": 3, "MCEN 1025": 4, "PHYS 1120": 4, "PHYS 1140": 1, 
-            "APPM 2350": 4, "MCEN 2000": 1, "MCEN 2023": 3, "MCEN 2024": 3, "APPM 2360": 4, 
-            "MCEN 2043": 3, "MCEN 2063": 3, "MCEN 3012": 3, "MCEN 3021": 3, "MCEN 3025": 3, 
-            "MCEN 3030": 3, "MCEN 3022": 3, "MCEN 4026": 3, "MCEN 4043": 3, "MCEN 3032": 3, 
-            "MCEN 3047": 4, "MCEN 4045": 3, "MCEN 4085": 3, "ECEN 3010": 3,
-            "H&SS Lower": 3, "H&SS Upper": 3, "Free Elective": 3, "Writing": 3, 
-            "Gen Tech": 3, "ME Tech": 3
+            "APPM 1350": 4, "MCEN 1030": 3, "PHYS 1110": 4, "GEEN 1400": 3,  
+            "APPM 1360": 4, "MCEN 1024": 3, "MCEN 1025": 4, "MCEN 1026": 3, "PHYS 1120": 4, "PHYS 1140": 1, 
+            "APPM 2350": 4, "MCEN 2000": 1, "MCEN 2023": 3, "MCEN 2024": 3, "MCEN 2026": 1, "APPM 2360": 4, 
+            "MCEN 2043": 3, "MCEN 2063": 3, "MCEN 3012": 3, "MCEN 3021": 3, "MCEN 3025": 4, 
+            "MCEN 3030": 3, "MCEN 3022": 3, "MCEN 4026": 4, "MCEN 4043": 4, "MCEN 3032": 3, 
+            "MCEN 3047": 4, "MCEN 4045": 4, "MCEN 4085": 3, "MCEN 3017": 3,
+            "Custom / Elective": 3
         };
 
-        const PREREQS = {
-            "APPM 1360": ["APPM 1350"], "PHYS 1120": ["PHYS 1110"], "APPM 2350": ["APPM 1360"],
-            "APPM 2360": ["APPM 1360"], "MCEN 2023": ["APPM 1360", "PHYS 1110"], "MCEN 2063": ["MCEN 2023"],
-            "MCEN 3021": ["MCEN 2023", "APPM 2350"], "MCEN 3022": ["MCEN 3021"], "MCEN 4045": ["MCEN 3022", "MCEN 3030"],
-            "MCEN 4085": ["MCEN 4045"]
+        const COURSE_INFO = {
+            "APPM 1350": "Calculus 1 for Engineers", "APPM 1360": "Calculus 2 for Engineers",
+            "PHYS 1110": "General Physics 1", "MCEN 1025": "Computer-Aided Design and Fabrication (Legacy)",
+            "MCEN 1026": "Computer-Aided Design and Fabrication (Part 1)", "MCEN 2026": "Computer-Aided Design and Fabrication (Part 2)",
+            "MCEN 2023": "Statics and Structures", "MCEN 3012": "Thermodynamics",
+            "Custom / Elective": "Drag to planner and click the pencil to define the course name, credits, and requirement category."
         };
+
+        const TARGETS = {
+            "Total Credits": 128, "MCEN Core": 16, "H&SS Lower": 3, "H&SS Upper": 2,
+            "ME Tech": 3, "Gen Tech": 1, "Free Elective": 2, "Writing": 1
+        };
+
+        const PREREQ_RULES = {
+            'MCEN2023': [['APPM1360', 'MATH2300'], ['PHYS1110']],
+            'MCEN2024': [['MCEN1024', 'CHEN1211', 'CHEM1113', 'CHEN1201'], ['PHYS1110']],
+            'MCEN2043': [['MCEN2023', 'CVEN2121', 'GEEN2851', 'ASEN2701'], ['APPM1360', 'MATH2300']],
+            'MCEN2063': [['MCEN2023', 'CVEN2121', 'GEEN2851', 'ASEN2001', 'ASEN2701'], ['APPM1360', 'MATH2300']],
+            'MCEN3012': [['APPM1360', 'MATH2300']],
+            'MCEN3017': [['PHYS1120']],
+            'MCEN3021': [['MCEN2023', 'CVEN2121', 'GEEN2851', 'ASEN2001', 'ASEN2701', 'CHEN2120'], ['APPM2350', 'MATH2400']],
+            'MCEN3022': [['MCEN3012', 'AREN2110', 'GEEN3852', 'EVEN3012'], ['MCEN3021', 'CVEN3313'], ['APPM2360', 'APPM3310', 'MATH3430']],
+            // Note: If MCEN 3025 should accept 1026+2026 as well, we will need to update this prereq array.
+            'MCEN3025': [['MCEN1025'], ['MCEN2024', 'GEEN3024', 'ASEN1022'], ['MCEN2063', 'CVEN3161']],
+            'MCEN3030': [['APPM2360', 'MATH3430', 'APPM3310'], ['MCEN1030', 'CSCI1300', 'CSCI1310', 'CSCI1320', 'ECEN1310', 'ASEN1320']],
+            'MCEN3032': [['MCEN3012', 'GEEN3852', 'AREN2110', 'EVEN3012', 'CHEN2120'], ['MCEN3021', 'CHEN3200', 'CVEN3313'], ['APPM2360', 'MATH3430', 'APPM3310']],
+            'MCEN3047': [['PHYS1140']],
+            'MCEN4026': [['MCEN2024', 'GEEN3024', 'ASEN1022']],
+            'MCEN4043': [['MCEN2043', 'CVEN3111'], ['ECEN3010', 'ECEN2270', 'GEEN3010', 'MCEN3017']],
+            'MCEN4045': [['GEEN1400', 'GEEN2400', 'GEEN3400'], ['MCEN2000'], ['MCEN3012'], ['MCEN3021'], ['MCEN3025'], ['MCEN3030'], ['MCEN3022', 'MCEN4043', 'MCEN3047']],
+            'MCEN4085': [['MCEN4045']]
+        };
+
+        const COREQ_RULES = {
+            'MCEN3017': [['APPM2360', 'APPM3310', 'MATH3430']],
+            'MCEN3047': [['ECEN3010', 'ECEN2270', 'GEEN3010', 'MCEN3017'], ['MCEN3030', 'APPM4650', 'APPM4600', 'CSCI3656']],
+            'MCEN4043': [['MCEN3030', 'APPM4650', 'APPM4600', 'CSCI3656']]
+        };
+
+        let yearCount = 0;
+        let SEM_ORDER = ["transfer"];
+        let editingPill = null;
 
         const TEMPLATES = {
             "blue_plan": {
@@ -115,24 +239,43 @@
                 "Year2-Fall": ["H&SS Lower", "MCEN 2000", "MCEN 2024", "APPM 2350", "MCEN 2023"],
                 "Year2-Spring": ["H&SS Lower", "Free Elective", "MCEN 3012", "APPM 2360", "MCEN 2063", "MCEN 2043"],
                 "Year3-Fall": ["MCEN 3012", "MCEN 3021", "MCEN 3030", "H&SS Lower", "Gen Tech"],
-                "Year3-Spring": ["MCEN 3022", "MCEN 3032", "ECEN 3010", "Writing", "ME Tech"],
+                "Year3-Spring": ["MCEN 3022", "MCEN 3032", "Free Elective", "Writing", "ME Tech"],
                 "Year4-Fall": ["MCEN 4026", "MCEN 4043", "MCEN 4045", "ME Tech", "H&SS Upper"],
-                "Year4-Spring": ["MCEN 4085", "MCEN 3047", "ME Tech", "H&SS Upper", "Free Elective"]
+                "Year4-Spring": ["MCEN 4085", "MCEN 3047", "ME Tech", "H&SS Upper"]
             },
             "green_plan": {
-                "Year1-Fall": ["H&SS Lower", "GEEN 1400", "MCEN 1024", "APPM 1350"],
-                "Year1-Spring": ["H&SS Lower", "PHYS 1110", "APPM 1360", "MCEN 1030"],
-                "Year2-Fall": ["PHYS 1120", "PHYS 1140", "APPM 2350", "MCEN 1025", "MCEN 2023"],
-                "Year2-Spring": ["APPM 2360", "MCEN 2024", "MCEN 2063", "MCEN 2000", "H&SS Lower"],
-                "Year3-Fall": ["MCEN 3012", "MCEN 3021", "MCEN 2043", "Writing", "H&SS Lower"],
-                "Year3-Spring": ["MCEN 3022", "MCEN 3030", "MCEN 3032", "ECEN 3010", "ME Tech"],
-                "Year4-Fall": ["MCEN 4026", "MCEN 4043", "MCEN 4045", "Gen Tech", "H&SS Upper"],
-                "Year4-Spring": ["MCEN 4085", "MCEN 3047", "ME Tech", "ME Tech", "H&SS Upper"]
+                "Year1-Fall": ["GEEN 1400", "APPM 1350", "PHYS 1110"],
+                "Year1-Spring": ["APPM 1360", "PHYS 1120", "PHYS 1140"],
+                "Year2-Fall": ["MCEN 1030", "MCEN 1024", "H&SS Lower", "APPM 2350", "MCEN 2023"],
+                "Year2-Spring": ["MCEN 1025", "MCEN 2000", "MCEN 2024", "APPM 2360", "MCEN 3012", "H&SS Lower"],
+                "Year3-Fall": ["MCEN 2063", "MCEN 2043", "MCEN 3021", "Free Elective", "Writing"],
+                "Year3-Spring": ["MCEN 3022", "MCEN 3032", "MCEN 3030", "Free Elective", "Gen Tech"],
+                "Year4-Fall": ["MCEN 4026", "MCEN 4043", "MCEN 4045", "ME Tech", "H&SS Upper"],
+                "Year4-Spring": ["MCEN 4085", "MCEN 3047", "ME Tech", "H&SS Upper"]
+            },
+            "example_4-year_plan": {
+                "Year1-Fall": ["H&SS Lower", "H&SS Lower", "GEEN 1400", "APPM 1350", "PHYS 1110"],
+                "Year1-Spring": ["H&SS Lower", "MCEN 1030", "APPM 1360", "PHYS 1120", "PHYS 1140"],
+                "Year2-Fall": ["Free Elective", "MCEN 2000", "MCEN 1024", "APPM 2350", "MCEN 1026"],
+                "Year2-Spring": ["Free Elective", "MCEN 2024", "MCEN 2023", "APPM 2360", "MCEN 3012", "MCEN 2026"],
+                "Year3-Fall": ["Writing", "MCEN 2063", "MCEN 2043", "MCEN 3017", "MCEN 3030"],
+                "Year3-Spring": ["H&SS Upper", "MCEN 3021", "MCEN 4026", "MCEN 3025", "MCEN 3047"],
+                "Year4-Fall": ["H&SS Upper", "MCEN 4045", "MCEN 3022", "MCEN 4043", "ME Tech"],
+                "Year4-Spring": ["MCEN 4085", "MCEN 3032", "Gen Tech", "Gen Tech", "ME Tech"]
+            },
+            "example_5-year_plan": {
+                "Year1-Fall": ["H&SS Lower", "MCEN 1024", "GEEN 1400", "APPM 1350"],
+                "Year1-Spring": ["H&SS Lower", "APPM 1360", "PHYS 1110", "MCEN 1026"],
+                "Year2-Fall": ["H&SS Lower", "PHYS 1120", "PHYS 1140", "APPM 2350", "MCEN 2026"],
+                "Year2-Spring": ["Free Elective", "MCEN 1030", "MCEN 2023", "APPM 2360", "MCEN 2000"],
+                "Year3-Fall": ["Free Elective", "MCEN 2024", "MCEN 2063", "MCEN 2043"],
+                "Year3-Spring": ["H&SS Upper", "MCEN 3012", "MCEN 3017", "MCEN 3025"],
+                "Year4-Fall": ["H&SS Upper", "MCEN 4026", "MCEN 3030", "MCEN 3021"],
+                "Year4-Spring": ["Gen Tech", "MCEN 3022", "Writing", "MCEN 4043"],
+                "Year5-Fall": ["MCEN 3032", "MCEN 4045", "ME Tech", "MCEN 3047"],
+                "Year5-Spring": ["Gen Tech", "MCEN 4085", "ME Tech"]
             }
         };
-
-        let yearCount = 0;
-        let SEM_ORDER = ["transfer"];
 
         function init() {
             renderCatalog();
@@ -144,7 +287,10 @@
                 while(yearCount < numYears) addYear();
                 Object.entries(data).forEach(([sid, courses]) => {
                     const box = document.querySelector(`[data-sid="${sid}"]`);
-                    if (box) courses.forEach(c => createCourseDOM(c, box));
+                    if (box) courses.forEach(c => {
+                        if (typeof c === 'string') createCourseDOM(c, box);
+                        else createCourseDOM(c.code, box, c.label, c.credits, c.category);
+                    });
                 });
             } else {
                 for(let i=0; i<4; i++) addYear();
@@ -152,36 +298,54 @@
             validateAll();
         }
 
+        function filterCatalog() {
+            const term = document.getElementById('catalogSearch').value.toLowerCase();
+            document.querySelectorAll('.course-pill').forEach(pill => {
+                const code = pill.dataset.code.toLowerCase();
+                const desc = (COURSE_INFO[pill.dataset.code] || "").toLowerCase();
+                pill.style.display = (code.includes(term) || desc.includes(term)) ? "flex" : "none";
+            });
+        }
+
         function addYear() {
             yearCount++;
-            const labels = ["First Year", "Sophomore Year", "Junior Year", "Senior Year", "Fifth Year", "Sixth Year"];
-            const titleText = labels[yearCount-1] || `Year ${yearCount}`;
             const cleanY = `Year${yearCount}`;
             const row = document.createElement('div');
-            row.className = 'year-row';
-            row.id = `row-${cleanY}`;
+            row.className = 'year-row'; row.id = `row-${cleanY}`;
+            
+            let removeBtnHtml = '';
+            if (yearCount > 4) {
+                removeBtnHtml = `<button class="action-btn" style="font-size:0.7em" onclick="removeYear('${cleanY}')">Remove</button>`;
+            }
+
             let semsHtml = '';
             ["Fall", "Spring", "Summer"].forEach(t => {
                 const sid = `${cleanY}-${t}`;
                 if (!SEM_ORDER.includes(sid)) SEM_ORDER.push(sid);
-                semsHtml += `
-                    <div class="semester-box" data-sid="${sid}" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                semsHtml += `<div class="semester-box" data-sid="${sid}" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
                         <div class="semester-header"><span>${t}</span><span class="sem-credits" id="cr-${sid}">0 cr</span></div>
                     </div>`;
             });
-            row.innerHTML = `<h3 class="year-title"><span>${titleText}</span> ${yearCount > 4 ? `<button class="remove-btn" onclick="removeYear('${cleanY}')">Remove</button>` : ''}</h3><div class="semesters">${semsHtml}</div>`;
+            row.innerHTML = `<h3 class="year-title"><span>Year ${yearCount}</span> ${removeBtnHtml}</h3><div class="semesters">${semsHtml}</div>`;
             document.getElementById('planner').appendChild(row);
         }
 
         function applyTemplate() {
             const key = document.getElementById('planTemplate').value;
             if (!key) return;
-            if (!confirm("This will clear your current plan and apply the 4-year template. Proceed?")) return;
-            
             document.querySelectorAll('.dropped-course').forEach(c => c.remove());
-            // Ensure 4 years exist
-            while(yearCount < 4) addYear();
-
+            
+            // Dynamically check how many years the template requires
+            let maxYear = 4;
+            if (TEMPLATES[key]) {
+                Object.keys(TEMPLATES[key]).forEach(sid => {
+                    const yearMatch = sid.match(/Year(\d+)/);
+                    if (yearMatch) maxYear = Math.max(maxYear, parseInt(yearMatch[1]));
+                });
+            }
+            
+            while(yearCount < maxYear) addYear();
+            
             Object.entries(TEMPLATES[key]).forEach(([sid, courses]) => {
                 const box = document.querySelector(`[data-sid="${sid}"]`);
                 if (box) courses.forEach(c => createCourseDOM(c, box));
@@ -189,38 +353,154 @@
             validateAll();
         }
 
+        function openEditModal(btn) {
+            editingPill = btn.closest('.dropped-course');
+            document.getElementById('modTitle').value = editingPill.dataset.label;
+            document.getElementById('modCreds').value = editingPill.dataset.credits;
+            document.getElementById('modCat').value = editingPill.dataset.category || "none";
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+            editingPill = null;
+        }
+
+        function saveModal() {
+            if (!editingPill) return;
+            editingPill.dataset.label = document.getElementById('modTitle').value;
+            editingPill.dataset.credits = parseFloat(document.getElementById('modCreds').value) || 0;
+            editingPill.dataset.category = document.getElementById('modCat').value;
+            editingPill.querySelector('.course-label').innerText = editingPill.dataset.label;
+            editingPill.querySelector('.course-creds').innerText = `(${editingPill.dataset.credits}cr)`;
+            closeModal();
+            validateAll();
+        }
+
         function validateAll() {
             const courseMap = {};
+            let progressCounts = { "Total Credits": 0, "MCEN Core": 0, "H&SS Lower": 0, "H&SS Upper": 0, "ME Tech": 0, "Gen Tech": 0, "Free Elective": 0, "Writing": 0 };
+
             document.querySelectorAll('.semester-box').forEach(box => {
                 const sid = box.dataset.sid;
-                const courses = Array.from(box.querySelectorAll('.dropped-course')).map(c => c.dataset.code);
-                courseMap[sid] = courses;
-                let semTotal = courses.reduce((sum, code) => sum + (CATALOG[code] || 0), 0);
+                const courseNodes = Array.from(box.querySelectorAll('.dropped-course'));
+                
+                courseMap[sid] = courseNodes.filter(c => c.dataset.category !== "No Credit").flatMap(c => {
+                    return [
+                        c.dataset.code.replace(/[\s-]/g, '').toUpperCase(),
+                        c.dataset.label.replace(/[\s-]/g, '').toUpperCase()
+                    ];
+                });
+                
+                let semAttempted = 0;
+                let semEarned = 0;
+                
+                courseNodes.forEach(pill => {
+                    let creds = parseFloat(pill.dataset.credits || 0);
+                    let cat = pill.dataset.category;
+                    
+                    semAttempted += creds;
+                    pill.classList.toggle('no-credit-pill', cat === "No Credit");
+
+                    if (cat !== "No Credit") {
+                        semEarned += creds;
+                        progressCounts["Total Credits"] += creds;
+
+                        if (cat !== "none" && progressCounts[cat] !== undefined) {
+                            progressCounts[cat]++;
+                        } else if (pill.dataset.code.startsWith("MCEN") && !cat.includes("Tech")) {
+                            progressCounts["MCEN Core"]++; 
+                        }
+                    }
+                });
+
                 const counter = document.getElementById(`cr-${sid}`);
-                if(counter) { counter.innerText = `${semTotal} cr`; counter.classList.toggle('overload', semTotal > 18); }
+                if(counter) { 
+                    counter.innerText = semAttempted === semEarned ? `${semEarned} cr` : `${semAttempted} (${semEarned}) cr`; 
+                    counter.classList.toggle('overload', semAttempted > 18); 
+                }
             });
+
+            updateProgressDashboard(progressCounts);
 
             document.querySelectorAll('.dropped-course').forEach(pill => {
                 const code = pill.dataset.code;
+                const cleanCode = code.replace(/[\s-]/g, '').toUpperCase();
                 const sid = pill.closest('.semester-box').dataset.sid;
                 const myIndex = SEM_ORDER.indexOf(sid);
-                const missingPre = (PREREQS[code] || []).filter(req => {
-                    for (let i = 0; i < myIndex; i++) if (courseMap[SEM_ORDER[i]]?.includes(req)) return false;
-                    return true;
+                
+                let missingPre = [];
+                (PREREQ_RULES[cleanCode] || []).forEach(reqGroup => {
+                    let satisfied = false;
+                    for(let i=0; i<myIndex; i++) {
+                        if(reqGroup.some(req => courseMap[SEM_ORDER[i]]?.includes(req))) {
+                            satisfied = true; break;
+                        }
+                    }
+                    if(!satisfied) missingPre.push(reqGroup.join('/'));
                 });
-                pill.classList.toggle('prereq-error', missingPre.length > 0);
-                pill.querySelector('.error-label').innerText = missingPre.length ? "⚠ Pre: " + missingPre.join(', ') : "";
+
+                let missingCo = [];
+                (COREQ_RULES[cleanCode] || []).forEach(reqGroup => {
+                    let satisfied = false;
+                    for(let i=0; i<=myIndex; i++) {
+                        if(reqGroup.some(req => courseMap[SEM_ORDER[i]]?.includes(req))) {
+                            satisfied = true; break;
+                        }
+                    }
+                    if(!satisfied) missingCo.push(reqGroup.join('/'));
+                });
+
+                pill.classList.toggle('prereq-error', missingPre.length > 0 || missingCo.length > 0);
+                let errorText = "";
+                if (missingPre.length) errorText += "⚠ Pre: " + missingPre.join(', ') + " ";
+                if (missingCo.length) errorText += "⚠ Co: " + missingCo.join(', ');
+                pill.querySelector('.error-label').innerText = errorText.trim();
             });
         }
 
-        function createCourseDOM(code, box) {
+        function updateProgressDashboard(counts) {
+            const board = document.getElementById('progressBoard');
+            board.innerHTML = '';
+            Object.keys(TARGETS).forEach(key => {
+                const target = TARGETS[key];
+                const current = counts[key] || 0;
+                const isComplete = current >= target;
+                const unit = key === "Total Credits" ? "cr" : "";
+                board.innerHTML += `
+                    <div class="prog-badge ${isComplete ? 'complete' : ''}">
+                        ${key} <span class="count">${current} / ${target}${unit}</span>
+                    </div>`;
+            });
+        }
+
+        function createCourseDOM(code, box, customLabel = null, customCredits = null, customCategory = null) {
+            const actualLabel = customLabel || code;
+            const actualCredits = customCredits !== null ? customCredits : (CATALOG[code] || 3); 
+            
+            let actualCategory = customCategory || "none";
+            if (!customCategory && TARGETS[code]) actualCategory = code; 
+
             const div = document.createElement('div');
             div.className = 'dropped-course';
             div.id = 'c-' + Math.random().toString(36).substr(2, 9);
             div.draggable = true;
             div.dataset.code = code;
+            div.dataset.label = actualLabel;
+            div.dataset.credits = actualCredits;
+            div.dataset.category = actualCategory;
+            div.dataset.info = COURSE_INFO[code] || "Custom course. Click pencil to edit details and requirement tags.";
             div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({elId: div.id, source: 'sem'}));
-            div.innerHTML = `<div style="display:flex; justify-content:space-between"><strong>${code}</strong><button class="remove-btn" onclick="this.closest('.dropped-course').remove(); validateAll();">&times;</button></div><div class="error-label"></div>`;
+            
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div><strong class="course-label">${actualLabel}</strong> <span class="course-creds" style="font-size:0.85em; color:#555;">(${actualCredits}cr)</span></div>
+                    <div class="btn-group">
+                        <button class="icon-btn edit-btn" onclick="openEditModal(this)">✏️</button>
+                        <button class="icon-btn remove-btn" onclick="this.closest('.dropped-course').remove(); validateAll();">&times;</button>
+                    </div>
+                </div>
+                <div class="error-label"></div>`;
             box.appendChild(div);
         }
 
@@ -234,30 +514,87 @@
 
         function renderCatalog() {
             const cat = document.getElementById('catalog');
-            Object.keys(CATALOG).sort().forEach(code => {
+            const getRank = (code) => {
+                if (code === "Custom / Elective") return 1;
+                if (code.startsWith("APPM")) return 2;
+                if (code.startsWith("PHYS")) return 3;
+                if (code.startsWith("MCEN")) return 4;
+                return 5; 
+            };
+
+            Object.keys(CATALOG).sort((a, b) => {
+                let rankA = getRank(a);
+                let rankB = getRank(b);
+                if (rankA !== rankB) return rankA - rankB;
+                return a.localeCompare(b);
+            }).forEach(code => {
                 const div = document.createElement('div');
-                div.className = 'course-pill';
-                div.draggable = true;
+                div.className = 'course-pill'; div.draggable = true;
                 div.dataset.code = code;
+                div.dataset.info = COURSE_INFO[code] || "Drag to planner";
                 div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({code, source: 'catalog'}));
                 div.innerHTML = `<span>${code}</span> <span class="credits-badge">${CATALOG[code]} cr</span>`;
                 cat.appendChild(div);
             });
         }
 
+        function exportForPowerAutomate() {
+            const studentId = document.getElementById('studentID').value || "Unknown_Student";
+            
+            const payload = {
+                studentId: studentId,
+                generatedAt: new Date().toISOString(),
+                planData: []
+            };
+
+            document.querySelectorAll('.semester-box').forEach(box => {
+                const term = box.dataset.sid; // e.g., "Year1-Fall"
+                const courses = Array.from(box.querySelectorAll('.dropped-course'));
+                
+                courses.forEach(pill => {
+                    payload.planData.push({
+                        semester: term,
+                        courseCode: pill.dataset.code,
+                        courseLabel: pill.dataset.label,
+                        credits: parseFloat(pill.dataset.credits),
+                        requirementCat: pill.dataset.category,
+                        status: pill.dataset.category === "No Credit" ? "Dropped/Failed" : "Planned/Passed"
+                    });
+                });
+            });
+
+            const jsonString = JSON.stringify(payload, null, 2);
+            
+            navigator.clipboard.writeText(jsonString).then(() => {
+                alert("Data copied to clipboard! You can now paste this payload into a Power Automate 'Parse JSON' module.");
+                console.log(jsonString);
+            }).catch(err => {
+                console.error("Failed to copy text: ", err);
+                alert("Failed to copy. Check the developer console.");
+            });
+        }
+
         function duplicatePlan() {
             const plan = {};
             document.querySelectorAll('.semester-box').forEach(box => {
-                const courses = Array.from(box.querySelectorAll('.dropped-course')).map(c => c.dataset.code);
+                const courses = Array.from(box.querySelectorAll('.dropped-course')).map(c => ({
+                    code: c.dataset.code, label: c.dataset.label, credits: parseFloat(c.dataset.credits), category: c.dataset.category
+                }));
                 if (courses.length) plan[box.dataset.sid] = courses;
             });
             window.open(`${window.location.origin}${window.location.pathname}?plan=${encodeURIComponent(JSON.stringify(plan))}`, '_blank');
         }
 
         function clearPlan() { if(confirm("Clear all?")) { document.querySelectorAll('.dropped-course').forEach(c => c.remove()); validateAll(); }}
-        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-        function removeYear(id) { document.getElementById(`row-${id}`).remove(); SEM_ORDER = SEM_ORDER.filter(s => !s.startsWith(id)); validateAll(); }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragLeave(e) {}
+        
+        function removeYear(id) { 
+            document.getElementById(`row-${id}`).remove(); 
+            SEM_ORDER = SEM_ORDER.filter(s => !s.startsWith(id)); 
+            if (id === `Year${yearCount}`) yearCount--; 
+            validateAll(); 
+        }
 
         init();
     </script>
