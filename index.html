@@ -54,6 +54,13 @@
         button.export-btn:hover { background: #005a9e; }
         button.clear-btn { background: #fff1f1; color: #721c24; border: 1px solid #f5c6cb; }
 
+        .instructions-box {
+            background: #e1f0fa; border-left: 4px solid #0078d4;
+            padding: 10px 20px; margin: 15px 30px 0 30px; border-radius: 4px;
+            font-size: 0.9em; color: #333;
+        }
+        .instructions-box ul { margin: 5px 0 0 0; padding-left: 20px; }
+
         /* Progress Tracker Dashboard */
         .progress-dashboard {
             background: white; padding: 15px 30px; border-bottom: 2px solid var(--border-color);
@@ -103,7 +110,7 @@
         .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
 
         @media print {
-            #sidebar, .controls, .progress-dashboard, .btn-group, .year-remove-btn { display: none !important; }
+            #sidebar, .controls, .instructions-box, .progress-dashboard, .btn-group, .year-remove-btn { display: none !important; }
             #main-content { display: block; }
             .year-row { border: 1px solid #ccc; page-break-inside: avoid; margin-bottom: 15px; }
         }
@@ -132,6 +139,16 @@
             <button class="action-btn" onclick="duplicatePlan()">Duplicate Link</button>
             <button class="action-btn export-btn" onclick="exportForPowerAutomate()">Export JSON</button>
             <button class="action-btn clear-btn" style="margin-left:auto" onclick="clearPlan()">Clear</button>
+        </div>
+
+        <div class="instructions-box">
+            <strong>How to use this planner:</strong> 
+            <ul>
+                <li><strong>Drag and drop</strong> courses from the catalog on the left into any semester block.</li>
+                <li><strong>Start quickly</strong> by selecting a 4-year or 5-year template from the dropdown and clicking "Apply".</li>
+                <li><strong>Edit details:</strong> Click the pencil (✏️) on any placed course to update its title, credits, or requirement category.</li>
+                <li><strong>Check prerequisites:</strong> Courses will highlight in red with a warning if they are placed before their required prerequisites or corequisites.</li>
+            </ul>
         </div>
 
         <div class="progress-dashboard" id="progressBoard">
@@ -190,11 +207,18 @@
         };
 
         const COURSE_INFO = {
-            "APPM 1350": "Calculus 1 for Engineers", "APPM 1360": "Calculus 2 for Engineers",
-            "PHYS 1110": "General Physics 1", "MCEN 1025": "Computer-Aided Design and Fabrication (Legacy)",
+            "APPM 1350": "Calculus 1 for Engineers", "APPM 1360": "Calculus 2 for Engineers", "APPM 2350": "Calculus 3 for Engineers", "APPM 2360": "Intro to Differential Equations with Linear Algebra",
+            "PHYS 1110": "General Physics 1", "PHYS 1120": "General Physics 2", "PHYS 1140": "Experimental Physics 1",
+            "GEEN 1400": "Engineering Projects",
+            "MCEN 1024": "Chemistry for Energy and Materials Science", "MCEN 1025": "Computer-Aided Design and Fabrication (Legacy)",
             "MCEN 1026": "Computer-Aided Design and Fabrication (Part 1)", "MCEN 2026": "Computer-Aided Design and Fabrication (Part 2)",
-            "MCEN 2023": "Statics and Structures", "MCEN 3012": "Thermodynamics",
-            "Custom / Elective": "Drag to planner and click the pencil to define the course name, credits, and requirement category."
+            "MCEN 1030": "Data Analysis for Mechanical Engineering",
+            "MCEN 2000": "Mechanical Engineering Professionalism Seminar",
+            "MCEN 2023": "Statics and Structures", "MCEN 2024": "Materials Science", "MCEN 2043": "Dynamics", "MCEN 2063": "Mechanics of Solids",
+            "MCEN 3012": "Thermodynamics", "MCEN 3017": "Circuits and Electronics", "MCEN 3021": "Fluid Mechanics", "MCEN 3022": "Heat Transfer",
+            "MCEN 3025": "Component Design", "MCEN 3030": "Computational Methods", "MCEN 3032": "Thermodynamics 2", "MCEN 3047": "Data Analysis and Experimental Methods",
+            "MCEN 4026": "Manufacturing Processes and Systems", "MCEN 4043": "System Dynamics", "MCEN 4045": "Mechanical Engineering Design Project 1", "MCEN 4085": "Mechanical Engineering Design Project 2",
+            "Custom / Elective": "Custom course. Click pencil to edit details and requirement tags."
         };
 
         const TARGETS = {
@@ -210,8 +234,6 @@
             'MCEN3012': [['APPM1360', 'MATH2300']],
             'MCEN3017': [['PHYS1120']],
             'MCEN3021': [['MCEN2023', 'CVEN2121', 'GEEN2851', 'ASEN2001', 'ASEN2701', 'CHEN2120'], ['APPM2350', 'MATH2400']],
-            'MCEN3022': [['MCEN3012', 'AREN2110', 'GEEN3852', 'EVEN3012'], ['MCEN3021', 'CVEN3313'], ['APPM2360', 'APPM3310', 'MATH3430']],
-            // Note: If MCEN 3025 should accept 1026+2026 as well, we will need to update this prereq array.
             'MCEN3025': [['MCEN1025'], ['MCEN2024', 'GEEN3024', 'ASEN1022'], ['MCEN2063', 'CVEN3161']],
             'MCEN3030': [['APPM2360', 'MATH3430', 'APPM3310'], ['MCEN1030', 'CSCI1300', 'CSCI1310', 'CSCI1320', 'ECEN1310', 'ASEN1320']],
             'MCEN3032': [['MCEN3012', 'GEEN3852', 'AREN2110', 'EVEN3012', 'CHEN2120'], ['MCEN3021', 'CHEN3200', 'CVEN3313'], ['APPM2360', 'MATH3430', 'APPM3310']],
@@ -335,7 +357,6 @@
             if (!key) return;
             document.querySelectorAll('.dropped-course').forEach(c => c.remove());
             
-            // Dynamically check how many years the template requires
             let maxYear = 4;
             if (TEMPLATES[key]) {
                 Object.keys(TEMPLATES[key]).forEach(sid => {
@@ -489,7 +510,7 @@
             div.dataset.label = actualLabel;
             div.dataset.credits = actualCredits;
             div.dataset.category = actualCategory;
-            div.dataset.info = COURSE_INFO[code] || "Custom course. Click pencil to edit details and requirement tags.";
+            div.dataset.info = COURSE_INFO[code] || code;
             div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({elId: div.id, source: 'sem'}));
             
             div.innerHTML = `
@@ -517,9 +538,10 @@
             const getRank = (code) => {
                 if (code === "Custom / Elective") return 1;
                 if (code.startsWith("APPM")) return 2;
-                if (code.startsWith("PHYS")) return 3;
-                if (code.startsWith("MCEN")) return 4;
-                return 5; 
+                if (code.startsWith("GEEN")) return 3;
+                if (code.startsWith("PHYS")) return 4;
+                if (code.startsWith("MCEN")) return 5;
+                return 6; 
             };
 
             Object.keys(CATALOG).sort((a, b) => {
@@ -531,7 +553,7 @@
                 const div = document.createElement('div');
                 div.className = 'course-pill'; div.draggable = true;
                 div.dataset.code = code;
-                div.dataset.info = COURSE_INFO[code] || "Drag to planner";
+                div.dataset.info = COURSE_INFO[code] || code;
                 div.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify({code, source: 'catalog'}));
                 div.innerHTML = `<span>${code}</span> <span class="credits-badge">${CATALOG[code]} cr</span>`;
                 cat.appendChild(div);
@@ -548,7 +570,7 @@
             };
 
             document.querySelectorAll('.semester-box').forEach(box => {
-                const term = box.dataset.sid; // e.g., "Year1-Fall"
+                const term = box.dataset.sid; 
                 const courses = Array.from(box.querySelectorAll('.dropped-course'));
                 
                 courses.forEach(pill => {
